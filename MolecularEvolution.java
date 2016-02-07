@@ -9,8 +9,16 @@ public class MolecularEvolution {
 		String path = "C:\\Users\\Timothy\\Desktop\\temp\\bioinformatics\\dataset_a_b.txt";
 		List<String> lines = BioinformaticsCommon.readFile(path);
 		
+		// test for DistanceBetweenLeaves
+		//DistanceBetweenLeaves(lines);
+		
+		// test for LimbLength
+		/*int[][] dist = ConstructDistanceMatrixFromFile(lines, 2);
+		int j = Integer.parseInt(lines.get(1));
+		System.out.println(LimbLength(dist, j));*/
+		
 		// test for AdditivePhylogeny
-		int n = Integer.parseInt(lines.get(0));
+		/*int n = Integer.parseInt(lines.get(0));
 		origN = n;
 		int[][] dist = ConstructDistanceMatrixFromFile(lines, 1);
 		newNodeLabel = n*2-3;
@@ -19,7 +27,14 @@ public class MolecularEvolution {
 		for (int s = 0; s < list.size(); s++) {
 			Map.Entry me2 = (Map.Entry)list.get(s);
 			System.out.print(me2.getKey() + ":" +((Edge)me2.getValue()).weight +"\r\n");
-		}
+		}*/
+		
+		// test for UPGMA
+		int leafCount = Integer.parseInt(lines.get(0));
+		double[][] distMatrix = ConstructDoubleDistanceMatrixFromFile(lines, 1);
+		UltrametricTree tree = new UltrametricTree();
+		tree.UPGMA(leafCount, distMatrix);
+		tree.PrintEdges();
 	}
 	
 	/**
@@ -109,6 +124,20 @@ public class MolecularEvolution {
 	private static int[][] ConstructDistanceMatrixFromFile(List<String> lines, int startWithLineIndex) {
 		int leafCount = Integer.parseInt(lines.get(0));
 		int[][] dist = new int[leafCount][leafCount];
+		
+		for (int lineIndex = startWithLineIndex; lineIndex < lines.size(); lineIndex++) {
+			StringTokenizer st = new StringTokenizer(lines.get(lineIndex));
+			for (int n = 0; n < leafCount; n++) {
+				dist[lineIndex-startWithLineIndex][n] = Integer.parseInt(st.nextToken());
+			}
+		}
+		
+		return dist;
+	}
+	
+	private static double[][] ConstructDoubleDistanceMatrixFromFile(List<String> lines, int startWithLineIndex) {
+		int leafCount = Integer.parseInt(lines.get(0));
+		double[][] dist = new double[leafCount][leafCount];
 		
 		for (int lineIndex = startWithLineIndex; lineIndex < lines.size(); lineIndex++) {
 			StringTokenizer st = new StringTokenizer(lines.get(lineIndex));
