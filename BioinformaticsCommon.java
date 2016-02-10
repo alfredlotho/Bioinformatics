@@ -15,16 +15,22 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 public class BioinformaticsCommon {
+	
+	public static final String NODE_SEPARATOR = "->";
 
 	/**
 	 * reads a file into memory
 	 * @return a list of strings in the file (line by line)
 	 */
 	public static List<String> readFile() {
+		String path = "C:\\Users\\Alfred\\Downloads\\dataset_a_b.txt";
+		return readFile(path);
+	}
+	
+	public static List<String> readFile(String path) {
 		String line = "";
 		List<String> records = new ArrayList<String>();
 		
-		String path = "C:\\Users\\Alfred\\Downloads\\dataset_a_b.txt";
 		BufferedReader br;
 		
 		try {
