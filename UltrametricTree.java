@@ -117,6 +117,6 @@ class UltrametricEdge {
 	@Override
 	public String toString() {
 		DecimalFormat df = new DecimalFormat("#.000");
-		return nodeA + PhylogenicTree.NODE_SEPARATOR +nodeB +":" +df.format(weight);
+		return nodeA + BioinformaticsCommon.NODE_SEPARATOR +nodeB +":" +df.format(weight);
 	}
 }

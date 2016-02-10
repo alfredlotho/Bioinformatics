@@ -9,7 +9,6 @@ import java.util.StringTokenizer;
 public class PhylogenicTree {
 	Map<Integer, Node> nodeList = new HashMap<Integer, Node>();
 	Map<String, Edge> edgeList = new HashMap<String, Edge>();
-	public static final String NODE_SEPARATOR = "->";
 	int[][] pathMatrix;
 	int origN = 0;
 	
@@ -20,8 +19,8 @@ public class PhylogenicTree {
 		AddToPathMatrix(0, 1, initialWeight);
 		nodeList.put(0, new Node(0, 1));
 		nodeList.put(1, new Node(1, 0));
-		edgeList.put("0" +NODE_SEPARATOR +"1", new Edge(nodeList.get(0), nodeList.get(1), initialWeight));
-		edgeList.put("1" +NODE_SEPARATOR +"0", new Edge(nodeList.get(1), nodeList.get(0), initialWeight));
+		edgeList.put("0" +BioinformaticsCommon.NODE_SEPARATOR +"1", new Edge(nodeList.get(0), nodeList.get(1), initialWeight));
+		edgeList.put("1" +BioinformaticsCommon.NODE_SEPARATOR +"0", new Edge(nodeList.get(1), nodeList.get(0), initialWeight));
 	}
 	
 	public void AddToPathMatrix(int a, int b, int weight) {
@@ -37,7 +36,7 @@ public class PhylogenicTree {
 						pathMatrix[i][j] + pathMatrix[j][b] == pathMatrix[i][b] &&
 						pathMatrix[a][j] + pathMatrix[j][b] == pathMatrix[a][b] &&
 						pathMatrix[a][j] > weight) {		
-							if (!edgeList.containsKey(i +NODE_SEPARATOR +j)) {
+							if (!edgeList.containsKey(i +BioinformaticsCommon.NODE_SEPARATOR +j)) {
 								continue;
 							}
 							int nodeWeight = weight - pathMatrix[a][i];
@@ -53,8 +52,8 @@ public class PhylogenicTree {
 		Comparator<Map.Entry<String, Edge>> byNodeA = new Comparator<Map.Entry<String, Edge>>() {
 	        @Override
 	        public int compare(Map.Entry<String, Edge> left, Map.Entry<String, Edge> right) {
-	        	Integer leftComparator = Integer.parseInt(new StringTokenizer(left.getKey(), NODE_SEPARATOR).nextToken());
-	        	Integer rightComparator = Integer.parseInt(new StringTokenizer(right.getKey(), NODE_SEPARATOR).nextToken());
+	        	Integer leftComparator = Integer.parseInt(new StringTokenizer(left.getKey(), BioinformaticsCommon.NODE_SEPARATOR).nextToken());
+	        	Integer rightComparator = Integer.parseInt(new StringTokenizer(right.getKey(), BioinformaticsCommon.NODE_SEPARATOR).nextToken());
 	            return leftComparator.compareTo(rightComparator);
 	        }
 	    };
@@ -67,35 +66,35 @@ public class PhylogenicTree {
 	public void BreakEdge(int leftNodeIndex, int rightNodeIndex, int newNodeId, int leftBreakWeight, int totalWeight, int baldIndex, int limbLength) {
 		int nodeAIndex = leftNodeIndex;
 		int nodeBIndex = nodeList.get(nodeAIndex).parentNode;
-		String edgeId = nodeAIndex +NODE_SEPARATOR +nodeBIndex;
+		String edgeId = nodeAIndex +BioinformaticsCommon.NODE_SEPARATOR +nodeBIndex;
 		if (edgeList.get(edgeId).weight < leftBreakWeight) {
 			StringTokenizer st = new StringTokenizer(FindMiddleNode(leftNodeIndex, rightNodeIndex, leftBreakWeight, totalWeight-leftBreakWeight));
 			nodeAIndex = Integer.parseInt(st.nextToken());
 			nodeBIndex = Integer.parseInt(st.nextToken());
 			leftBreakWeight = Integer.parseInt(st.nextToken());
-			edgeId = nodeAIndex +NODE_SEPARATOR +nodeBIndex;
+			edgeId = nodeAIndex +BioinformaticsCommon.NODE_SEPARATOR +nodeBIndex;
 		}
 		Node newParentNode = new Node(newNodeId, nodeBIndex);
 		// break the edge by dividing the distance between the node to its parent by value of leftBreakWeight
 		nodeList.put(newNodeId, newParentNode);
-		edgeList.put(nodeAIndex+NODE_SEPARATOR+newNodeId, new Edge(nodeList.get(nodeAIndex), newParentNode, leftBreakWeight));
-		edgeList.put(newNodeId+NODE_SEPARATOR+nodeAIndex, new Edge(newParentNode, nodeList.get(nodeAIndex), leftBreakWeight));
+		edgeList.put(nodeAIndex+BioinformaticsCommon.NODE_SEPARATOR+newNodeId, new Edge(nodeList.get(nodeAIndex), newParentNode, leftBreakWeight));
+		edgeList.put(newNodeId+BioinformaticsCommon.NODE_SEPARATOR+nodeAIndex, new Edge(newParentNode, nodeList.get(nodeAIndex), leftBreakWeight));
 		nodeList.get(nodeAIndex).parentNode = newNodeId;
 		AddToPathMatrix(nodeAIndex, newNodeId, leftBreakWeight);
 		// connect new internal node to the right part of the broken edge
 		int rightBreakWeight = edgeList.get(edgeId).weight - leftBreakWeight;
-		edgeList.put(nodeBIndex+NODE_SEPARATOR+newNodeId, new Edge(nodeList.get(nodeBIndex), newParentNode, rightBreakWeight));
-		edgeList.put(newNodeId+NODE_SEPARATOR+nodeBIndex, new Edge(newParentNode, nodeList.get(nodeBIndex), rightBreakWeight));
+		edgeList.put(nodeBIndex+BioinformaticsCommon.NODE_SEPARATOR+newNodeId, new Edge(nodeList.get(nodeBIndex), newParentNode, rightBreakWeight));
+		edgeList.put(newNodeId+BioinformaticsCommon.NODE_SEPARATOR+nodeBIndex, new Edge(newParentNode, nodeList.get(nodeBIndex), rightBreakWeight));
 		nodeList.get(nodeBIndex).parentNode = newNodeId;
 		AddToPathMatrix(nodeBIndex, newNodeId, rightBreakWeight);
 		// connect new internal node to bald limb node
 		nodeList.put(baldIndex, new Node(baldIndex, newNodeId));
-		edgeList.put(baldIndex+NODE_SEPARATOR+newNodeId, new Edge(nodeList.get(baldIndex), newParentNode, limbLength));
-		edgeList.put(newNodeId+NODE_SEPARATOR+baldIndex, new Edge(newParentNode, nodeList.get(baldIndex), limbLength));
+		edgeList.put(baldIndex+BioinformaticsCommon.NODE_SEPARATOR+newNodeId, new Edge(nodeList.get(baldIndex), newParentNode, limbLength));
+		edgeList.put(newNodeId+BioinformaticsCommon.NODE_SEPARATOR+baldIndex, new Edge(newParentNode, nodeList.get(baldIndex), limbLength));
 		AddToPathMatrix(baldIndex, newNodeId, limbLength);
 		// remove original edge that was broken into 3 parts
 		edgeList.remove(edgeId);
-		edgeList.remove(nodeBIndex+NODE_SEPARATOR+nodeAIndex);
+		edgeList.remove(nodeBIndex+BioinformaticsCommon.NODE_SEPARATOR+nodeAIndex);
 		
 		// recalculate path matrix
 		for (int z : nodeList.keySet()) {

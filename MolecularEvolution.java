@@ -1,9 +1,7 @@
 import java.util.List;
-import java.util.Map;
 import java.util.StringTokenizer;
 
 public class MolecularEvolution {
-
 	public static void main(String[] args) {
 		// common
 		String path = "C:\\Users\\Timothy\\Desktop\\temp\\bioinformatics\\dataset_a_b.txt";
@@ -30,11 +28,26 @@ public class MolecularEvolution {
 		}*/
 		
 		// test for UPGMA
-		int leafCount = Integer.parseInt(lines.get(0));
+		/*int leafCount = Integer.parseInt(lines.get(0));
 		double[][] distMatrix = ConstructDoubleDistanceMatrixFromFile(lines, 1);
 		UltrametricTree tree = new UltrametricTree();
 		tree.UPGMA(leafCount, distMatrix);
-		tree.PrintEdges();
+		tree.PrintEdges();*/
+		
+		// test for constructing neighbor joining matrix
+		/*int leafCount = Integer.parseInt(lines.get(0));
+		double[][] distMatrix = ConstructDoubleDistanceMatrixFromFile(lines, 1);
+		double[][] dStar = NeighborJoining.ConstructNeighborJoiningMatrix(distMatrix, leafCount);
+		PrintMatrix(dStar);*/
+		
+		// test for neighbor joining distance algorithm
+		/*int leafCount = Integer.parseInt(lines.get(0));
+		double[][] distMatrix = ConstructDoubleDistanceMatrixFromFile(lines, 1);
+		NeighborTree tree = NeighborJoining.ExecuteJoiningAlgorithm(distMatrix, leafCount, leafCount);
+		tree.PrintTree();*/
+		
+		// test for small parsimony algorithm
+		Parsimony p = new Parsimony(lines);
 	}
 	
 	/**
@@ -47,7 +60,7 @@ public class MolecularEvolution {
 		
 		for (int lineIndex = 1; lineIndex < lines.size(); lineIndex++) {
 			StringTokenizer st = new StringTokenizer(lines.get(lineIndex), ":");
-			StringTokenizer st2 = new StringTokenizer(st.nextToken(), PhylogenicTree.NODE_SEPARATOR);
+			StringTokenizer st2 = new StringTokenizer(st.nextToken(), BioinformaticsCommon.NODE_SEPARATOR);
 			int weight = Integer.parseInt(st.nextToken());
 			int leftNode = Integer.parseInt(st2.nextToken());
 			int rightNode = Integer.parseInt(st2.nextToken());
@@ -230,4 +243,20 @@ public class MolecularEvolution {
 		}
 		return reducedMatrix;
 	}
+	
+	/**
+	 * print the contents of a square matrix
+	 * @param matrix
+	 */
+	private static void PrintMatrix(double[][] matrix) {
+		int size = matrix[0].length;
+		for (int i = 0; i < size; i++) {
+			for (int j = 0; j < size; j++) {
+				System.out.print(matrix[i][j] +(j==size?"":" "));
+			}
+			System.out.println();
+		}
+	}
+	
+	
 }
