@@ -207,7 +207,7 @@ public class BioinformaticsCommon {
 	 * writes a string to a text file
 	 */
 	public static void WriteOutputToFile(String temp) {
-		String path = "C:\\Users\\Alfred\\Downloads\\output.txt";
+		String path = "C:\\Users\\Timothy\\Downloads\\output.txt";
 		try (Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(path), "utf-8"))) {
 		   writer.write(temp);
 		} catch (Exception e) {
