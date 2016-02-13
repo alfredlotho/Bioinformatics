@@ -46,8 +46,10 @@ public class MolecularEvolution {
 		NeighborTree tree = NeighborJoining.ExecuteJoiningAlgorithm(distMatrix, leafCount, leafCount);
 		tree.PrintTree();*/
 		
-		// test for small parsimony algorithm
-		Parsimony p = new Parsimony(lines);
+		// test for small parsimony algorithm (for a rooted tree)
+		Parsimony p = new Parsimony();
+		p.RootedParsimony(lines);
+		
 	}
 	
 	/**

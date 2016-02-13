@@ -1,6 +1,4 @@
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +11,15 @@ public class Parsimony {
 	static final char NULL_NUCLEOTIDE = '-';
 	static final int INFINITY = 99999; //do not use Integer.MAX_VALUE since comparison error occurs
 	
-	public Parsimony(List<String> lines) {
+	/**
+	 * performs the small parsimony algorithm on each of the character indices of a rooted tree
+	 * (i.e. if there are 8 characters on the dna string, this algorithm is performed 8 times and then the
+	 * all the results are combined together to form the dna string for each internal node (and root) that 
+	 * produces the minimum parsimony score for the input adjacency list)
+	 * @param lines - a number on the first line representing the number of leaves in the tree followed by
+	 * 					an adjacency list representing the predefined rooted tree structure
+	 */
+	public void RootedParsimony(List<String> lines) {
 		treeList = new HashMap<Integer, ParsimonyTree>();
 		int leafCount = Integer.parseInt(lines.get(0));
 		ParsimonyTree mainTree = new ParsimonyTree(leafCount);
@@ -53,7 +59,6 @@ public class Parsimony {
 				mainTree.nodeList.get(m).leafLabel += treeList.get(k).nodeList.get(m).leafLabel;
 			}
 		}
-		//mainTree.PrintNodes();
 		mainTree.PrintEdges();
 	}
 	
