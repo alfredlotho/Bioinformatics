@@ -19,7 +19,7 @@ public class Parsimony {
 	 * @param lines - a number on the first line representing the number of leaves in the tree followed by
 	 * 					an adjacency list representing the predefined rooted tree structure
 	 */
-	public void RootedParsimony(List<String> lines) {
+	public void RootedSmallParsimony(List<String> lines) {
 		treeList = new HashMap<Integer, ParsimonyTree>();
 		int leafCount = Integer.parseInt(lines.get(0));
 		ParsimonyTree mainTree = new ParsimonyTree(leafCount);
@@ -59,10 +59,69 @@ public class Parsimony {
 				mainTree.nodeList.get(m).leafLabel += treeList.get(k).nodeList.get(m).leafLabel;
 			}
 		}
-		mainTree.PrintEdges();
+		mainTree.PrintEdges(true);
 	}
 	
-	
+	public void UnrootedSmallParsimony(List<String> lines) {
+		treeList = new HashMap<Integer, ParsimonyTree>();
+		int leafCount = Integer.parseInt(lines.get(0));
+		ParsimonyTree mainTree = new ParsimonyTree(leafCount);
+		int parentIndex;
+		
+		for (int lineIndex = 2; lineIndex < lines.size(); lineIndex+=2) {
+			int i = lineIndex/2;
+			StringTokenizer st = new StringTokenizer(lines.get(lineIndex), BioinformaticsCommon.NODE_SEPARATOR);
+			parentIndex = Integer.parseInt(st.nextToken());
+			if (i <= leafCount) {
+				String childLabel = st.nextToken();
+					
+				if (dnaLength == 0) {
+					dnaLength = childLabel.length();
+					treeList.put(0, mainTree);
+					for (int j = 1; j <= dnaLength; j++) {
+						treeList.put(j, new ParsimonyTree(leafCount));
+					}
+					
+				}
+				mainTree.AddNode(i-1, true, -1, childLabel);
+				mainTree.AddNode(parentIndex, false, i-1, "");
+				
+				for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
+					treeList.get(charIndex+1).AddNode(i-1, true, -1, childLabel.substring(charIndex, charIndex+1));
+					treeList.get(charIndex+1).AddNode(parentIndex, false, i-1, "");
+				}
+			} else if (!mainTree.nodeList.containsKey(parentIndex) || mainTree.nodeList.get(parentIndex).son == null) {
+				/* do not add the nodes who are already parents because the edge between these pair of nodes is
+				 * where we will inject the temporary root node
+				 */
+				int childIndex = Integer.parseInt(st.nextToken());
+				mainTree.AddNode(parentIndex, false, childIndex, "");
+				for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
+					treeList.get(charIndex+1).AddNode(parentIndex, false, childIndex, "");
+				}
+			}
+			
+			
+		}
+		
+		// add the final root index that will be removed later
+		parentIndex = mainTree.nodeList.size();
+		// connect daughter and son node to temporary root node
+		mainTree.AddNode(parentIndex, false, parentIndex - 1, "");
+		mainTree.AddNode(parentIndex, false, parentIndex - 2, "");
+		for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
+			treeList.get(charIndex+1).AddNode(parentIndex, false, parentIndex - 1, "");
+			treeList.get(charIndex+1).AddNode(parentIndex, false, parentIndex - 2, "");
+		}
+					
+		for (int k = 1; k <= dnaLength; k++) {
+			treeList.get(k).SmallParsimony();
+			for (int m = leafCount; m < mainTree.nodeList.size(); m++) {
+				mainTree.nodeList.get(m).leafLabel += treeList.get(k).nodeList.get(m).leafLabel;
+			}
+		}
+		mainTree.PrintEdges(false);
+	}
 	
 	
 
@@ -187,36 +246,51 @@ class ParsimonyTree {
 	/**
 	 * gets the minimum score of the root among all nucleotide alphabet (A, C, T, G)
 	 * This is computed by adding the hamming distances of all edges in the tree
+	 * If the node is unrooted, the score of the edges that were originally connected to the root
+	 * is counted twice so we need to subtract the length for one of the edges
 	 */
-	public int GetMinimumScore() {
-		return nodeList.get(nodeList.size()-1).GetNodeScore();
+	public int GetMinimumScore(boolean isRooted) {
+		int score = nodeList.get(nodeList.size()-1).GetNodeScore();
+		if (!isRooted) {
+			score -= nodeList.get(nodeList.size()-2).edgeScore;
+		}
+		return score;
 	}
 	
 	/**
 	 * creates the list of edges by connecting all parent nodes with their daughter and child nodes
 	 * Parent nodes are the nodes whose index is greater than or equal to the leaf count and whose daughter and
 	 * son nodes are not null
+	 * @param isRooted - if false, merge the edges between the temporary root node that was added and its children
 	 */
-	public void ComputeEdges() {
+	public void ComputeEdges(boolean isRooted) {
 		for (int i = leafCount; i < nodeList.size(); i++) {
 			ParsimonyNode parent = nodeList.get(i);
-			edgeList.add(new ParsimonyEdge(parent.leafLabel, parent.daughter.leafLabel));
-			edgeList.add(new ParsimonyEdge(parent.daughter.leafLabel, parent.leafLabel));
-			parent.daughter.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
-			edgeList.add(new ParsimonyEdge(parent.leafLabel, parent.son.leafLabel));
-			edgeList.add(new ParsimonyEdge(parent.son.leafLabel, parent.leafLabel));
-			parent.son.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
+			if (!isRooted && i == nodeList.size() - 1) {	//if temporary root node of unrooted tree
+				edgeList.add(new ParsimonyEdge(parent.daughter.leafLabel, parent.son.leafLabel));
+				parent.daughter.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
+				edgeList.add(new ParsimonyEdge(parent.son.leafLabel, parent.daughter.leafLabel));
+				parent.son.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
+			} else {
+				edgeList.add(new ParsimonyEdge(parent.leafLabel, parent.daughter.leafLabel));
+				edgeList.add(new ParsimonyEdge(parent.daughter.leafLabel, parent.leafLabel));
+				parent.daughter.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
+				edgeList.add(new ParsimonyEdge(parent.leafLabel, parent.son.leafLabel));
+				edgeList.add(new ParsimonyEdge(parent.son.leafLabel, parent.leafLabel));
+				parent.son.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
+			}
 		}
 	}
 	
 	/**
 	 * prints all edges in the form a->b:c where a and b are parent and child nodes and c is their hamming distance
 	 * Each pair of nodes will be represented as 2 edges (a->b and b->a)
+	 * @param isRooted - whether the root of the tree is known or not
 	 */
-	public void PrintEdges() {
-		ComputeEdges();
+	public void PrintEdges(boolean isRooted) {
+		ComputeEdges(isRooted);
 		StringBuffer sb = new StringBuffer();
-		sb.append(GetMinimumScore());
+		sb.append(GetMinimumScore(isRooted));
 		sb.append(System.getProperty("line.separator"));
 		// commented code is for sorting by left node (the a in a -> b)
 		// this is not needed but makes the list easier to check when there are a lot of nodes
