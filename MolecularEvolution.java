@@ -47,8 +47,16 @@ public class MolecularEvolution {
 		tree.PrintTree();*/
 		
 		// test for small parsimony algorithm (for a rooted tree)
+		/*Parsimony p = new Parsimony();
+		p.RootedSmallParsimony(lines);*/
+		
+		// test for small parsimony algorithm (for an unrooted tree)
+		/*Parsimony p = new Parsimony();
+		p.UnrootedSmallParsimony(lines);*/
+		
+		// test for getting the neighboring tree of a given tree by interchanging the nodes connected to an internal edge
 		Parsimony p = new Parsimony();
-		p.RootedParsimony(lines);
+		p.NearestNeighborsOfTree(lines);
 		
 	}
 	

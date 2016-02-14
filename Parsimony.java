@@ -37,18 +37,18 @@ public class Parsimony {
 					}
 					
 				}
-				mainTree.AddNode(i-1, true, -1, childLabel);
-				mainTree.AddNode(parentIndex, false, i-1, "");
+				mainTree.AddNode(i-1, -1, childLabel);
+				mainTree.AddNode(parentIndex, i-1, "");
 				
 				for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
-					treeList.get(charIndex+1).AddNode(i-1, true, -1, childLabel.substring(charIndex, charIndex+1));
-					treeList.get(charIndex+1).AddNode(parentIndex, false, i-1, "");
+					treeList.get(charIndex+1).AddNode(i-1, -1, childLabel.substring(charIndex, charIndex+1));
+					treeList.get(charIndex+1).AddNode(parentIndex, i-1, "");
 				}
 			} else {
 				int childIndex = Integer.parseInt(st.nextToken());
-				mainTree.AddNode(parentIndex, false, childIndex, "");
+				mainTree.AddNode(parentIndex, childIndex, "");
 				for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
-					treeList.get(charIndex+1).AddNode(parentIndex, false, childIndex, "");
+					treeList.get(charIndex+1).AddNode(parentIndex, childIndex, "");
 				}
 			}
 		}
@@ -56,7 +56,7 @@ public class Parsimony {
 		for (int k = 1; k <= dnaLength; k++) {
 			treeList.get(k).SmallParsimony();
 			for (int m = leafCount; m < mainTree.nodeList.size(); m++) {
-				mainTree.nodeList.get(m).leafLabel += treeList.get(k).nodeList.get(m).leafLabel;
+				mainTree.nodeList.get(m).label += treeList.get(k).nodeList.get(m).label;
 			}
 		}
 		mainTree.PrintEdges(true);
@@ -83,47 +83,97 @@ public class Parsimony {
 					}
 					
 				}
-				mainTree.AddNode(i-1, true, -1, childLabel);
-				mainTree.AddNode(parentIndex, false, i-1, "");
+				mainTree.AddNode(i-1, -1, childLabel);
+				mainTree.AddNode(parentIndex, i-1, "");
+				
 				
 				for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
-					treeList.get(charIndex+1).AddNode(i-1, true, -1, childLabel.substring(charIndex, charIndex+1));
-					treeList.get(charIndex+1).AddNode(parentIndex, false, i-1, "");
+					treeList.get(charIndex+1).AddNode(i-1, -1, childLabel.substring(charIndex, charIndex+1));
+					treeList.get(charIndex+1).AddNode(parentIndex, i-1, "");
 				}
-			} else if (!mainTree.nodeList.containsKey(parentIndex) || mainTree.nodeList.get(parentIndex).son == null) {
+			} else if (!mainTree.nodeList.containsKey(parentIndex) || mainTree.nodeList.get(parentIndex).connection[1] == null) {
 				/* do not add the nodes who are already parents because the edge between these pair of nodes is
 				 * where we will inject the temporary root node
 				 */
 				int childIndex = Integer.parseInt(st.nextToken());
-				mainTree.AddNode(parentIndex, false, childIndex, "");
+				mainTree.AddNode(parentIndex, childIndex, "");
 				for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
-					treeList.get(charIndex+1).AddNode(parentIndex, false, childIndex, "");
+					treeList.get(charIndex+1).AddNode(parentIndex, childIndex, "");
 				}
 			}
-			
-			
 		}
 		
 		// add the final root index that will be removed later
 		parentIndex = mainTree.nodeList.size();
 		// connect daughter and son node to temporary root node
-		mainTree.AddNode(parentIndex, false, parentIndex - 1, "");
-		mainTree.AddNode(parentIndex, false, parentIndex - 2, "");
+		mainTree.AddNode(parentIndex, parentIndex - 1, "");
+		mainTree.AddNode(parentIndex, parentIndex - 2, "");
 		for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
-			treeList.get(charIndex+1).AddNode(parentIndex, false, parentIndex - 1, "");
-			treeList.get(charIndex+1).AddNode(parentIndex, false, parentIndex - 2, "");
+			treeList.get(charIndex+1).AddNode(parentIndex, parentIndex - 1, "");
+			treeList.get(charIndex+1).AddNode(parentIndex, parentIndex - 2, "");
+		}
+		
+		for (int tIndex = 0; tIndex < treeList.size(); tIndex++) {
+			ParsimonyTree tree = treeList.get(tIndex);
+			for (int pIndex = tree.nodeList.size()-1; pIndex >= leafCount; pIndex--) {
+				ParsimonyNode currNode = tree.nodeList.get(pIndex);
+				ParsimonyNode left = currNode.connection[0];
+				ParsimonyNode right = currNode.connection[1];
+				left.connection[2] = currNode;
+				right.connection[2] = currNode;
+			}
 		}
 					
+		//mainTree.PrintNodes();
 		for (int k = 1; k <= dnaLength; k++) {
 			treeList.get(k).SmallParsimony();
 			for (int m = leafCount; m < mainTree.nodeList.size(); m++) {
-				mainTree.nodeList.get(m).leafLabel += treeList.get(k).nodeList.get(m).leafLabel;
+				mainTree.nodeList.get(m).label += treeList.get(k).nodeList.get(m).label;
 			}
 		}
 		mainTree.PrintEdges(false);
 	}
 	
-	
+	/**
+	 * Input: Two internal nodes a and b specifying an edge e, followed by an adjacency
+     * list of an unrooted binary tree.
+     * Output: Two adjacency lists representing the nearest neighbors of the tree with
+     * respect to e. The adjacency lists are separated with a blank line.
+	 */
+	public void NearestNeighborsOfTree(List<String> lines) {
+		StringTokenizer st = new StringTokenizer(lines.get(0));
+		int internalNodeA = Integer.parseInt(st.nextToken());
+		int internalNodeB = Integer.parseInt(st.nextToken());
+		
+		ParsimonyTree tree = new ParsimonyTree(-1);
+		for (int i = 2; i < lines.size(); i+=2) {
+			st = new StringTokenizer(lines.get(i), BioinformaticsCommon.NODE_SEPARATOR);
+			int left = Integer.parseInt(st.nextToken());
+			int right = Integer.parseInt(st.nextToken());
+			tree.AddNode(right, -1, "");
+			tree.AddNode(left, right, "");
+		}
+		
+		// add the final root index that will be removed later
+		int root = tree.nodeList.size();
+		// connect daughter and son node to temporary root node
+		tree.AddNode(root, root - 1, "");
+		tree.AddNode(root, root - 2, "");
+		
+		for (int pIndex = tree.nodeList.size()-1; pIndex >= 0; pIndex--) {
+			ParsimonyNode currNode = tree.nodeList.get(pIndex);
+			if (currNode.isRoot()) {
+				tree.nodeList.get(root-1).connection[2] = tree.nodeList.get(root-2);
+				tree.nodeList.get(root-2).connection[2] = tree.nodeList.get(root-1);
+			} else if (!currNode.isLeaf()) {
+				ParsimonyNode left = currNode.connection[0];
+				ParsimonyNode right = currNode.connection[1];
+				left.connection[2] = currNode;
+				right.connection[2] = currNode;
+			}
+		}
+		tree.PrintNodes();
+	}
 
 }
 
@@ -144,15 +194,17 @@ class ParsimonyTree {
 	 * @param isLeaf - true if the node has only one edge connected to it
 	 * @param child - the daughter (left) node if the parent node is also new; 
 	 * 				- the son (right) node if parent node already exists
-	 * @param leafLabel - the DNA string that represents this node
+	 * 				- the parent node (or a fellow internal node for unrooted trees) if both children already exist
+	 * @param label - the DNA string that represents this node
 	 */
-	public void AddNode(int nodeIndex, boolean isLeaf, int child, String leafLabel) {
+	public void AddNode(int nodeIndex, int child, String label) {
 		if (!nodeList.containsKey(nodeIndex)) {
-			nodeList.put(nodeIndex, new ParsimonyNode(nodeIndex, isLeaf, nodeList.get(child), null, leafLabel));
-		} else {
-			ParsimonyNode node = nodeList.get(nodeIndex);
-			node.son = nodeList.get(child);
-		}
+			nodeList.put(nodeIndex, new ParsimonyNode(nodeIndex, label));
+		} 
+
+		ParsimonyNode node = nodeList.get(nodeIndex);
+		int connIndex = (node.connection[0] == null) ? 0 : ((node.connection[1]==null) ? 1 : 2);
+		node.connection[connIndex] = nodeList.get(child);
 	}
 	
 	/**
@@ -165,10 +217,10 @@ class ParsimonyTree {
 	public void SmallParsimony() {
 		for (int i = 0; i < nodeList.size(); i++) {
 			ParsimonyNode currNode = nodeList.get(i);
-			if (currNode.isLeaf) {
+			if (currNode.isLeaf()) {
 				currNode.tag = 1;
 				for (int k = 0; k < Parsimony.ALPHABET.length; k++) {
-					if (currNode.leafLabel.charAt(0) == Parsimony.ALPHABET[k]) {
+					if (currNode.label.charAt(0) == Parsimony.ALPHABET[k]) {
 						currNode.score[k] = 0;
 					} else {
 						currNode.score[k] = Parsimony.INFINITY;
@@ -184,15 +236,15 @@ class ParsimonyTree {
 				ParsimonyNode ripeNode = nodeList.get(ripeNodes.get(r));
 				ripeNode.tag = 1;
 				ScorePair sp = ripeNode.GetEffectiveScore(isRoot);
-				ripeNode.leafLabel = new String(sp.nucleotides);
+				ripeNode.label = new String(sp.nucleotides);
 			}
 			ripeNodes = GetRipeNodes();
 		}
 		
 		for (int i = nodeList.size()-1; i >= leafCount; i--) {
 			ParsimonyNode parent = nodeList.get(i);
-			ParsimonyNode daughter = parent.daughter;
-			ParsimonyNode son = parent.son;
+			ParsimonyNode daughter = parent.connection[0];
+			ParsimonyNode son = parent.connection[1];
 			ChangeLabel(parent, daughter);
 			ChangeLabel(parent, son);
 		}
@@ -207,18 +259,18 @@ class ParsimonyTree {
 	 */
 	private void ChangeLabel(ParsimonyNode parent, ParsimonyNode child) {
 		boolean isSet = false;
-		if (child.leafLabel.length() > 1 && !child.isLeaf) {
-			char parentChar = parent.leafLabel.charAt(0);
-			char[] choices = child.leafLabel.toCharArray();
+		if (child.label.length() > 1 && !child.isLeaf()) {
+			char parentChar = parent.label.charAt(0);
+			char[] choices = child.label.toCharArray();
 			for (int c = 0; c < choices.length; c++) {
 				if (choices[c] == parentChar) {
-					child.leafLabel = parent.leafLabel.charAt(0) +"";
+					child.label = parent.label.charAt(0) +"";
 					isSet = true;
 					break;
 				}
 			}
 			if (!isSet) {
-				child.leafLabel = child.leafLabel.substring(0,1);
+				child.label = child.label.substring(0,1);
 			}
 		}
 	}
@@ -267,17 +319,17 @@ class ParsimonyTree {
 		for (int i = leafCount; i < nodeList.size(); i++) {
 			ParsimonyNode parent = nodeList.get(i);
 			if (!isRooted && i == nodeList.size() - 1) {	//if temporary root node of unrooted tree
-				edgeList.add(new ParsimonyEdge(parent.daughter.leafLabel, parent.son.leafLabel));
-				parent.daughter.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
-				edgeList.add(new ParsimonyEdge(parent.son.leafLabel, parent.daughter.leafLabel));
-				parent.son.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
+				edgeList.add(new ParsimonyEdge(parent.connection[0].label, parent.connection[1].label));
+				parent.connection[0].edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
+				edgeList.add(new ParsimonyEdge(parent.connection[1].label, parent.connection[0].label));
+				parent.connection[1].edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
 			} else {
-				edgeList.add(new ParsimonyEdge(parent.leafLabel, parent.daughter.leafLabel));
-				edgeList.add(new ParsimonyEdge(parent.daughter.leafLabel, parent.leafLabel));
-				parent.daughter.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
-				edgeList.add(new ParsimonyEdge(parent.leafLabel, parent.son.leafLabel));
-				edgeList.add(new ParsimonyEdge(parent.son.leafLabel, parent.leafLabel));
-				parent.son.edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
+				edgeList.add(new ParsimonyEdge(parent.label, parent.connection[0].label));
+				edgeList.add(new ParsimonyEdge(parent.connection[0].label, parent.label));
+				parent.connection[0].edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
+				edgeList.add(new ParsimonyEdge(parent.label, parent.connection[1].label));
+				edgeList.add(new ParsimonyEdge(parent.connection[1].label, parent.label));
+				parent.connection[1].edgeScore = edgeList.get(edgeList.size()-1).GetHammingDist();
 			}
 		}
 	}
@@ -335,39 +387,46 @@ class ParsimonyEdge {
 	}
 }
 
+class LargeParsimonyNode {
+	
+}
+
 class ParsimonyNode {
-	boolean isLeaf;
 	int index;
-	ParsimonyNode daughter;
-	ParsimonyNode son;
+	ParsimonyNode[] connection = new ParsimonyNode[3]; 
 	int tag;
-	String leafLabel;
+	String label;
 	int[] score = new int[4];
 	int edgeScore;
 	
-	public ParsimonyNode(int index, boolean isLeaf, ParsimonyNode daughter, ParsimonyNode son, String leafLabel) {
+	public ParsimonyNode(int index, String label) {
 		this.index = index;
-		this.isLeaf = isLeaf;
-		this.daughter = daughter;
-		this.son = son;
-		this.leafLabel = leafLabel;
+		this.label = label;
+	}
+
+	public boolean isLeaf() {
+		return connection[1] == null;
+	}
+	
+	public boolean isRoot() {
+		return connection[2] == null;
 	}
 	
 	public boolean isRipe() {
-		return tag == 0 && daughter.tag == 1 && son.tag == 1;
+		return tag == 0 && connection[0].tag == 1 && connection[1].tag == 1;
 	}
 	
 	public int GetNodeScore() {
-		if (isLeaf) {
+		if (isLeaf()) {
 			return 0;
 		} else {
-			return daughter.edgeScore + son.edgeScore + daughter.GetNodeScore() + son.GetNodeScore();
+			return connection[0].edgeScore + connection[1].edgeScore + connection[0].GetNodeScore() + connection[1].GetNodeScore();
 		}
 	}
 	
 	public ScorePair GetEffectiveScore(boolean isRoot) {
-		int[] daughterScores = daughter.GetComponentScoreForParent();
-		int[] sonScores = son.GetComponentScoreForParent();
+		int[] daughterScores = connection[0].GetComponentScoreForParent();
+		int[] sonScores = connection[1].GetComponentScoreForParent();
 		int minScore = Parsimony.INFINITY;
 		String selNucleotides = "";
 		for (int i = 0; i < Parsimony.ALPHABET.length; i++) {
@@ -417,7 +476,7 @@ class ParsimonyNode {
 	
 	@Override
 	public String toString() {
-		return index +" " +(leafLabel==""?"":leafLabel) +" " +(daughter==null?-1:daughter.index) +" " +(son==null?-1:son.index);
+		return index +" " +(label==""?"":label) +" " +(connection[0]==null?-1:connection[0].index) +" " +(connection[1]==null?-1:connection[1].index) +" " +(connection[2]==null?-1:connection[2].index);
 	}
 }
 
