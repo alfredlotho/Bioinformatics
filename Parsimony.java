@@ -71,12 +71,17 @@ public class Parsimony {
 		ParsimonyTree mainTree = new ParsimonyTree(leafCount);
 		int parentIndex;
 		
-		for (int lineIndex = 2; lineIndex < lines.size(); lineIndex+=2) {
-			int i = lineIndex/2;
-			StringTokenizer st = new StringTokenizer(lines.get(lineIndex), BioinformaticsCommon.NODE_SEPARATOR);
-			parentIndex = Integer.parseInt(st.nextToken());
-			if (i <= leafCount) {
-				String childLabel = st.nextToken();
+		int leafIndex = -1;
+		for (int i = 1; i < lines.size(); i++) {
+			StringTokenizer st = new StringTokenizer(lines.get(i), BioinformaticsCommon.NODE_SEPARATOR);
+			String leftElem = st.nextToken();
+			if (!BioinformaticsCommon.isInteger(leftElem)) {
+				continue; //ignore this line if it starts with the dna string since this is a duplicate edge
+			}
+			parentIndex = Integer.parseInt(leftElem);
+			String childLabel = st.nextToken();
+			if (!BioinformaticsCommon.isInteger(childLabel)) {
+				leafIndex++;
 					
 				if (dnaLength == 0) {
 					dnaLength = childLabel.length();
@@ -86,19 +91,19 @@ public class Parsimony {
 					}
 					
 				}
-				mainTree.AddNode(i-1, -1, childLabel);
-				mainTree.AddNode(parentIndex, i-1, "");
+				mainTree.AddNode(leafIndex, -1, childLabel);
+				mainTree.AddNode(parentIndex, leafIndex, "");
 				
 				
 				for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
-					treeList.get(charIndex+1).AddNode(i-1, -1, childLabel.substring(charIndex, charIndex+1));
-					treeList.get(charIndex+1).AddNode(parentIndex, i-1, "");
+					treeList.get(charIndex+1).AddNode(leafIndex, -1, childLabel.substring(charIndex, charIndex+1));
+					treeList.get(charIndex+1).AddNode(parentIndex, leafIndex, "");
 				}
 			} else if (!mainTree.nodeList.containsKey(parentIndex) || mainTree.nodeList.get(parentIndex).connection[1] == null) {
 				/* do not add the nodes who are already parents because the edge between these pair of nodes is
 				 * where we will inject the temporary root node
 				 */
-				int childIndex = Integer.parseInt(st.nextToken());
+				int childIndex = Integer.parseInt(childLabel);
 				mainTree.AddNode(parentIndex, childIndex, "");
 				for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
 					treeList.get(charIndex+1).AddNode(parentIndex, childIndex, "");
@@ -150,7 +155,7 @@ public class Parsimony {
 		int internalNodeB = Integer.parseInt(st.nextToken());
 		
 		ParsimonyTree tree = new ParsimonyTree(-1);
-		for (int i = 2; i < lines.size(); i+=2) {
+		for (int i = 1; i < lines.size(); i++) {
 			st = new StringTokenizer(lines.get(i), BioinformaticsCommon.NODE_SEPARATOR);
 			int left = Integer.parseInt(st.nextToken());
 			int right = Integer.parseInt(st.nextToken());

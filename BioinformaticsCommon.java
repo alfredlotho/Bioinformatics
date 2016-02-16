@@ -387,5 +387,18 @@ public class BioinformaticsCommon {
 		return scoringMatrix;
 	}
 	
+	/**
+	 * @param s - a dna string or its numeric node index 
+	 * 			- we are sure that this is either a positive number of a nonempty string so no need for those checks
+	 * @return true if the input string is an integer
+	 */
+	public static boolean isInteger(String s) {
+	    for(int i = 0; i < s.length(); i++) {
+	        if(Character.digit(s.charAt(i), 10) < 0) {
+	        	return false;
+	        }
+	    }
+	    return true;
+	}
 
 }
