@@ -52,11 +52,19 @@ public class MolecularEvolution {
 		
 		// test for small parsimony algorithm (for an unrooted tree)
 		/*Parsimony p = new Parsimony();
-		p.UnrootedSmallParsimony(lines);*/
+		ParsimonyTree mainTree = p.UnrootedSmallParsimony(lines);
+		StringBuffer sb = new StringBuffer();
+		mainTree.PrintEdges(false, true, sb);
+		BioinformaticsCommon.WriteOutputToFile(sb.toString());*/
 		
 		// test for getting the neighboring tree of a given tree by interchanging the nodes connected to an internal edge
+		/*Parsimony p = new Parsimony();
+		p.isScoreShown = false;
+		p.NearestNeighborsOfTree(lines);*/
+		
+		// test for neighbor interchange heuristic across all nodes/trees
 		Parsimony p = new Parsimony();
-		p.NearestNeighborsOfTree(lines);
+		p.LargeParsimonyHeuristic(lines);
 		
 	}
 	
