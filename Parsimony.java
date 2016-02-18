@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,7 +100,7 @@ public class Parsimony {
 					treeList.get(charIndex+1).AddNode(leafIndex, -1, childLabel.substring(charIndex, charIndex+1));
 					treeList.get(charIndex+1).AddNode(parentIndex, leafIndex, "");
 				}
-			} else if (!mainTree.nodeList.containsKey(parentIndex) || mainTree.nodeList.get(parentIndex).connection[1] == null) {
+			} else { //TODO if (!mainTree.nodeList.containsKey(parentIndex) || mainTree.nodeList.get(parentIndex).connection[1] == null) {
 				/* do not add the nodes who are already parents because the edge between these pair of nodes is
 				 * where we will inject the temporary root node
 				 */
@@ -111,28 +112,40 @@ public class Parsimony {
 			}
 		}
 		
+		
 		// add the final root index that will be removed later
 		parentIndex = mainTree.nodeList.size();
 		// connect daughter and son node to temporary root node
-		mainTree.AddNode(parentIndex, parentIndex - 1, "");
-		mainTree.AddNode(parentIndex, parentIndex - 2, "");
+		InsertRoot(mainTree, parentIndex);
 		for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
-			treeList.get(charIndex+1).AddNode(parentIndex, parentIndex - 1, "");
-			treeList.get(charIndex+1).AddNode(parentIndex, parentIndex - 2, "");
+			InsertRoot(treeList.get(charIndex+1), parentIndex);
 		}
 		
 		for (int tIndex = 0; tIndex < treeList.size(); tIndex++) {
 			ParsimonyTree tree = treeList.get(tIndex);
-			for (int pIndex = tree.nodeList.size()-1; pIndex >= leafCount; pIndex--) {
+			for (int pIndex = tree.nodeList.size()-2; pIndex >= leafCount; pIndex--) {
 				ParsimonyNode currNode = tree.nodeList.get(pIndex);
-				ParsimonyNode left = currNode.connection[0];
-				ParsimonyNode right = currNode.connection[1];
-				left.connection[2] = currNode;
-				right.connection[2] = currNode;
+				ParsimonyNode a = currNode.connection[0];
+				ParsimonyNode b = currNode.connection[1];
+				if (a.isLeaf())
+					a.connection[2] = currNode;
+				else
+					tree.AddNode(a.index, currNode.index, "");
+				
+				if (b.isLeaf())
+					b.connection[2] = currNode; 
+				else
+					tree.AddNode(b.index, currNode.index, "");
+				
+				if (!currNode.isRoot()) {
+					ParsimonyNode c = currNode.connection[2];
+					if (c != null) {
+						c.connection[2] = currNode;
+					}
+				}
 			}
 		}
-					
-		//mainTree.PrintNodes();
+				
 		for (int k = 1; k <= dnaLength; k++) {
 			treeList.get(k).SmallParsimony();
 			for (int m = leafCount; m < mainTree.nodeList.size(); m++) {
@@ -141,6 +154,25 @@ public class Parsimony {
 		}
 		
 		return mainTree;
+	}
+	
+	/**
+	 * Insert the root node between a random edge
+	 * Edge selection strategy: the last added non-root node and the second node connected to it
+	 * @param tree - the tree where the changes will be reflected
+	 * @param parentIndex - the index of the newly created temporary root node
+	 */
+	private void InsertRoot(ParsimonyTree tree, int parentIndex) {
+		tree.tempRootInsPoint = new TemporaryRootInsertionPoint(parentIndex - 1, tree.nodeList.get(parentIndex - 1).connection[1].index);
+		tree.AddNode(parentIndex, tree.tempRootInsPoint.nodeA, "");
+		tree.AddNode(parentIndex, tree.tempRootInsPoint.nodeB, "");
+		// assign the temporary root node as one of the connections of both nodes in the root insertion point  
+		ReplaceParent(tree.nodeList.get(tree.tempRootInsPoint.nodeA), 
+				tree.nodeList.get(tree.tempRootInsPoint.nodeB), 
+				tree.nodeList.get(parentIndex));
+		ReplaceParent(tree.nodeList.get(tree.tempRootInsPoint.nodeB), 
+				tree.nodeList.get(tree.tempRootInsPoint.nodeA), 
+				tree.nodeList.get(parentIndex));
 	}
 	
 	/**
@@ -169,11 +201,29 @@ public class Parsimony {
 		tree.AddNode(root, root - 1, "");
 		tree.AddNode(root, root - 2, "");
 		
+		AssignThirdConnectedNode(tree);
+		
+		ParsimonyTree switchedTree0 = SwitchSubtrees(tree, internalNodeA, internalNodeB, 0);
+		switchedTree0.PrintEdges(false, false, sb);
+		sb.append(System.getProperty("line.separator"));
+		ParsimonyTree switchedTree1 = SwitchSubtrees(tree, internalNodeA, internalNodeB, 1);
+		switchedTree1.PrintEdges(false, false, sb);
+		BioinformaticsCommon.WriteOutputToFile(sb.toString());
+	}
+	
+	/**
+	 * This method assigns the parent internal node of leaf nodes.
+	 * If the current node being checked is also an internal node, this method simply connects it to the third node
+	 * which it connects to but haven't been registered yet as a connection.
+	 * @param tree
+	 */
+	public void AssignThirdConnectedNode(ParsimonyTree tree) {
+		int root = tree.nodeList.size()-1;
 		for (int pIndex = tree.nodeList.size()-1; pIndex >= 0; pIndex--) {
 			ParsimonyNode currNode = tree.nodeList.get(pIndex);
 			if (currNode.isRoot()) {
-				tree.nodeList.get(root-1).connection[2] = tree.nodeList.get(root-2);
-				tree.nodeList.get(root-2).connection[2] = tree.nodeList.get(root-1);
+				tree.nodeList.get(tree.tempRootInsPoint.nodeA).connection[2] = tree.nodeList.get(tree.tempRootInsPoint.nodeB);
+				tree.nodeList.get(tree.tempRootInsPoint.nodeB).connection[2] = tree.nodeList.get(tree.tempRootInsPoint.nodeA);
 			} else if (!currNode.isLeaf()) {
 				ParsimonyNode left = currNode.connection[0];
 				ParsimonyNode right = currNode.connection[1];
@@ -181,12 +231,6 @@ public class Parsimony {
 				right.connection[2] = currNode;
 			}
 		}
-		ParsimonyTree switchedTree0 = SwitchSubtrees(tree, internalNodeA, internalNodeB, 0);
-		switchedTree0.PrintEdges(false, false, sb);
-		sb.append(System.getProperty("line.separator"));
-		ParsimonyTree switchedTree1 = SwitchSubtrees(tree, internalNodeA, internalNodeB, 1);
-		switchedTree1.PrintEdges(false, false, sb);
-		BioinformaticsCommon.WriteOutputToFile(sb.toString());
 	}
 	
 	/**
@@ -260,7 +304,10 @@ public class Parsimony {
 				if (currEdge.isInternal) {
 					for (int switchIndex = 0; switchIndex <= 1; switchIndex++) {
 						dnaLength = 0; //reset
-						neighborTree = UnrootedSmallParsimony(SwitchSubtrees(tree, currEdge.nodeA, currEdge.nodeB, switchIndex).TreeToAdjacencyList());
+						AssignThirdConnectedNode(tree); //TODO
+						ParsimonyTree switchedTree = SwitchSubtrees(tree, currEdge.nodeA, currEdge.nodeB, switchIndex);
+						switchedTree.PrintNodes();
+						neighborTree = UnrootedSmallParsimony(switchedTree.TreeToAdjacencyList());
 						neighborScore = neighborTree.GetMinimumScore(false);
 						if (neighborScore < newScore) {
 							newScore = neighborScore;
@@ -275,10 +322,21 @@ public class Parsimony {
 	}
 }
 
+class TemporaryRootInsertionPoint {
+	int nodeA;
+	int nodeB;
+	
+	public TemporaryRootInsertionPoint(int nodeA, int nodeB) {
+		this.nodeA = nodeA;
+		this.nodeB = nodeB;
+	}
+}
+
 class ParsimonyTree {
 	Map<Integer, ParsimonyNode> nodeList;
 	int leafCount; 
 	Map<String, ParsimonyEdge> edgeList;
+	TemporaryRootInsertionPoint tempRootInsPoint;
 	
 	public ParsimonyTree(int leafCount) {
 		nodeList = new HashMap<Integer,ParsimonyNode>();
@@ -326,7 +384,9 @@ class ParsimonyTree {
 
 		ParsimonyNode node = nodeList.get(nodeIndex);
 		int connIndex = (node.connection[0] == null) ? 0 : ((node.connection[1]==null) ? 1 : 2);
-		node.connection[connIndex] = nodeList.get(child);
+		if (node.IsNewConnection(child)) { 
+			node.connection[connIndex] = nodeList.get(child);
+		}
 	}
 	
 	/**
@@ -427,7 +487,7 @@ class ParsimonyTree {
 		ComputeEdges(isRooted);
 		int score = nodeList.get(nodeList.size()-1).GetNodeScore();
 		if (!isRooted) {
-			score -= nodeList.get(nodeList.size()-2).edgeScore;
+			score -= nodeList.get(tempRootInsPoint.nodeA).edgeScore;
 		}
 		return score;
 	}
@@ -469,6 +529,9 @@ class ParsimonyTree {
 				parent.connection[0].edgeScore = edgeList.get(key).GetHammingDist();
 				key = AddEdge(parent.connection[1], parent.connection[0]);
 				parent.connection[1].edgeScore = edgeList.get(key).GetHammingDist();
+				// remove all edges connected to the temporary root
+				RemoveEdgeAndInverse(parent, parent.connection[0]);
+				RemoveEdgeAndInverse(parent, parent.connection[1]);
 			} else {
 				AddEdge(parent, parent.connection[0]);
 				key = AddEdge(parent.connection[0], parent);
@@ -481,6 +544,17 @@ class ParsimonyTree {
 				parent.connection[2].edgeScore = edgeList.get(key).GetHammingDist();
 			}
 		}	
+	}
+	
+	/**
+	 * removes both the edges representing the connection between the two input nodes
+	 * This is primarily used for removing the connection between the temporary root and its children
+	 * @param nodeA
+	 * @param nodeB
+	 */
+	private void RemoveEdgeAndInverse(ParsimonyNode nodeA, ParsimonyNode nodeB) {
+		edgeList.remove(nodeA.index +BioinformaticsCommon.NODE_SEPARATOR +nodeB.index);
+		edgeList.remove(nodeB.index +BioinformaticsCommon.NODE_SEPARATOR +nodeA.index);
 	}
 	
 	/**
@@ -575,6 +649,14 @@ class ParsimonyNode {
 	public ParsimonyNode(int index, String label) {
 		this.index = index;
 		this.label = label;
+	}
+	
+	public boolean IsNewConnection(int nodeIndex) {
+		if ((connection[0] != null && connection[0].index == nodeIndex) 
+				|| (connection[1] != null && connection[1].index == nodeIndex)
+				|| (connection[2] != null && connection[2].index == nodeIndex))
+			return false;
+		return true;
 	}
 	
 	/**
