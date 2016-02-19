@@ -123,16 +123,20 @@ public class Parsimony {
 		
 		for (int tIndex = 0; tIndex < treeList.size(); tIndex++) {
 			ParsimonyTree tree = treeList.get(tIndex);
-			for (int pIndex = tree.nodeList.size()-2; pIndex >= leafCount; pIndex--) {
+			for (int pIndex = tree.nodeList.size()-1; pIndex >= leafCount; pIndex--) {
 				ParsimonyNode currNode = tree.nodeList.get(pIndex);
 				ParsimonyNode a = currNode.connection[0];
 				ParsimonyNode b = currNode.connection[1];
-				if (a.isLeaf())
+				if (a == null)
+					; // do nothing
+				else if (a.isLeaf())
 					a.connection[2] = currNode;
 				else
 					tree.AddNode(a.index, currNode.index, "");
 				
-				if (b.isLeaf())
+				if (b == null)
+					; // do nothing
+				else if (b.isLeaf())
 					b.connection[2] = currNode; 
 				else
 					tree.AddNode(b.index, currNode.index, "");
@@ -140,12 +144,12 @@ public class Parsimony {
 				if (!currNode.isRoot()) {
 					ParsimonyNode c = currNode.connection[2];
 					if (c != null) {
-						c.connection[2] = currNode;
+						tree.AddNode(c.index, currNode.index, "");
 					}
 				}
 			}
 		}
-				
+		
 		for (int k = 1; k <= dnaLength; k++) {
 			treeList.get(k).SmallParsimony();
 			for (int m = leafCount; m < mainTree.nodeList.size(); m++) {
@@ -158,21 +162,33 @@ public class Parsimony {
 	
 	/**
 	 * Insert the root node between a random edge
-	 * Edge selection strategy: the last added non-root node and the second node connected to it
+	 * Edge selection strategy: the last added non-root node and an internal node connected to it
 	 * @param tree - the tree where the changes will be reflected
 	 * @param parentIndex - the index of the newly created temporary root node
 	 */
 	private void InsertRoot(ParsimonyTree tree, int parentIndex) {
-		tree.tempRootInsPoint = new TemporaryRootInsertionPoint(parentIndex - 1, tree.nodeList.get(parentIndex - 1).connection[1].index);
+		int daughter = parentIndex - 1;
+		ParsimonyNode daughterNode = tree.nodeList.get(parentIndex - 1);
+		int son = -1;
+		// find an internal node connected to daughter
+		for (int i = 0; i < daughterNode.connection.length; i++) {
+			if (!daughterNode.connection[i].isLeaf()) {
+				son = daughterNode.connection[i].index;
+				break;
+			}
+		}
+		tree.tempRootInsPoint = new TemporaryRootInsertionPoint(daughter, son);
 		tree.AddNode(parentIndex, tree.tempRootInsPoint.nodeA, "");
 		tree.AddNode(parentIndex, tree.tempRootInsPoint.nodeB, "");
 		// assign the temporary root node as one of the connections of both nodes in the root insertion point  
 		ReplaceParent(tree.nodeList.get(tree.tempRootInsPoint.nodeA), 
 				tree.nodeList.get(tree.tempRootInsPoint.nodeB), 
-				tree.nodeList.get(parentIndex));
+				tree.nodeList.get(parentIndex),
+				true);
 		ReplaceParent(tree.nodeList.get(tree.tempRootInsPoint.nodeB), 
 				tree.nodeList.get(tree.tempRootInsPoint.nodeA), 
-				tree.nodeList.get(parentIndex));
+				tree.nodeList.get(parentIndex),
+				true);
 	}
 	
 	/**
@@ -281,9 +297,28 @@ public class Parsimony {
 	}
 
 	private void ReplaceParent(ParsimonyNode childNode, ParsimonyNode parentToReplace, ParsimonyNode replaceBy) {
+		ReplaceParent(childNode, parentToReplace, replaceBy, false);
+	}
+	
+	/**
+	 * Replaces one of the connections of a target node
+	 * This is used for switching nodes/subtrees in the nearest neighbor tree algorithm
+	 * @param childNode - the target node
+	 * @param parentToReplace - the connection that will be replaced
+	 * @param replaceBy - the new connection that will be created
+	 * @param withRearrangement - if true, reassigned the new connection to the last connection node
+	 */
+	private void ReplaceParent(ParsimonyNode childNode, ParsimonyNode parentToReplace, ParsimonyNode replaceBy, boolean withRearrangement) {
 		for (int i = 0; i < 3; i++) {
 			if (childNode.connection[i] != null && childNode.connection[i].index == parentToReplace.index) {
-				childNode.connection[i] = replaceBy;
+				if (withRearrangement && i != 2) {
+					ParsimonyNode originalThirdNode = childNode.connection[2];
+					childNode.connection[2] = replaceBy;
+					childNode.connection[i] = originalThirdNode;
+					//childNode.connection[i] = replaceBy;
+				} else {
+					childNode.connection[i] = replaceBy;
+				}
 				break;
 			}
 		}
