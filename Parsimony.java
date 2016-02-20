@@ -1,8 +1,10 @@
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 public class Parsimony {
@@ -100,10 +102,7 @@ public class Parsimony {
 					treeList.get(charIndex+1).AddNode(leafIndex, -1, childLabel.substring(charIndex, charIndex+1));
 					treeList.get(charIndex+1).AddNode(parentIndex, leafIndex, "");
 				}
-			} else { //TODO if (!mainTree.nodeList.containsKey(parentIndex) || mainTree.nodeList.get(parentIndex).connection[1] == null) {
-				/* do not add the nodes who are already parents because the edge between these pair of nodes is
-				 * where we will inject the temporary root node
-				 */
+			} else { 
 				int childIndex = Integer.parseInt(childLabel);
 				mainTree.AddNode(parentIndex, childIndex, "");
 				for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
@@ -111,8 +110,7 @@ public class Parsimony {
 				}
 			}
 		}
-		
-		
+						
 		// add the final root index that will be removed later
 		parentIndex = mainTree.nodeList.size();
 		// connect daughter and son node to temporary root node
@@ -120,7 +118,7 @@ public class Parsimony {
 		for (int charIndex = 0; charIndex < dnaLength; charIndex++) {
 			InsertRoot(treeList.get(charIndex+1), parentIndex);
 		}
-		
+
 		for (int tIndex = 0; tIndex < treeList.size(); tIndex++) {
 			ParsimonyTree tree = treeList.get(tIndex);
 			for (int pIndex = tree.nodeList.size()-1; pIndex >= leafCount; pIndex--) {
@@ -129,23 +127,26 @@ public class Parsimony {
 				ParsimonyNode b = currNode.connection[1];
 				if (a == null)
 					; // do nothing
-				else if (a.isLeaf())
+				else if (a.index < leafCount)
 					a.connection[2] = currNode;
 				else
 					tree.AddNode(a.index, currNode.index, "");
 				
 				if (b == null)
 					; // do nothing
-				else if (b.isLeaf())
+				else if (b.index < leafCount)
 					b.connection[2] = currNode; 
 				else
 					tree.AddNode(b.index, currNode.index, "");
 				
 				if (!currNode.isRoot()) {
 					ParsimonyNode c = currNode.connection[2];
-					if (c != null) {
+					if (c == null)
+						; // do nothing
+					else if (c.index < leafCount)
+						c.connection[2] = currNode; 
+					else
 						tree.AddNode(c.index, currNode.index, "");
-					}
 				}
 			}
 		}
@@ -156,6 +157,7 @@ public class Parsimony {
 				mainTree.nodeList.get(m).label += treeList.get(k).nodeList.get(m).label;
 			}
 		}
+		//mainTree.PrintNodes();
 		
 		return mainTree;
 	}
@@ -214,8 +216,7 @@ public class Parsimony {
 		// add the final root index that will be removed later
 		int root = tree.nodeList.size();
 		// connect daughter and son node to temporary root node
-		tree.AddNode(root, root - 1, "");
-		tree.AddNode(root, root - 2, "");
+		InsertRoot(tree, root);
 		
 		AssignThirdConnectedNode(tree);
 		
@@ -329,18 +330,23 @@ public class Parsimony {
 		ParsimonyTree tree = UnrootedSmallParsimony(lines);
 		int newScore = tree.GetMinimumScore(false);
 		ParsimonyTree newTree = tree;
+		tree.PrintNodes();
 		while (newScore < score) {
 			score = newScore;
 			tree = newTree;
 			int neighborScore;
 			ParsimonyTree neighborTree;
+			System.out.println("while runs...");
 			for (String key : tree.edgeList.keySet()) {
 				ParsimonyEdge currEdge = tree.edgeList.get(key);
+				System.out.println("edge for runs..." +currEdge.isInternal +" " +currEdge.nodeA +" " +currEdge.nodeB);
 				if (currEdge.isInternal) {
 					for (int switchIndex = 0; switchIndex <= 1; switchIndex++) {
 						dnaLength = 0; //reset
+						tree.PrintNodes();
 						AssignThirdConnectedNode(tree); //TODO
 						ParsimonyTree switchedTree = SwitchSubtrees(tree, currEdge.nodeA, currEdge.nodeB, switchIndex);
+						System.out.println("switching trees " +switchIndex +" " +currEdge.nodeA +" " +currEdge.nodeB);
 						switchedTree.PrintNodes();
 						neighborTree = UnrootedSmallParsimony(switchedTree.TreeToAdjacencyList());
 						neighborScore = neighborTree.GetMinimumScore(false);
@@ -415,13 +421,20 @@ class ParsimonyTree {
 	public void AddNode(int nodeIndex, int child, String label) {
 		if (!nodeList.containsKey(nodeIndex)) {
 			nodeList.put(nodeIndex, new ParsimonyNode(nodeIndex, label));
-		} 
+		} else if (label.length() != 0) {
+			nodeList.get(nodeIndex).label = label;
+		}
+		
+		if (!nodeList.containsKey(child) && child != -1) {
+			nodeList.put(child, new ParsimonyNode(child, ""));
+		}
 
 		ParsimonyNode node = nodeList.get(nodeIndex);
 		int connIndex = (node.connection[0] == null) ? 0 : ((node.connection[1]==null) ? 1 : 2);
 		if (node.IsNewConnection(child)) { 
 			node.connection[connIndex] = nodeList.get(child);
 		}
+		
 	}
 	
 	/**
@@ -447,6 +460,7 @@ class ParsimonyTree {
 		}
 		
 		List<Integer> ripeNodes = GetRipeNodes();
+		
 		while (!ripeNodes.isEmpty()) {
 			boolean isRoot = ripeNodes.size() == 1;
 			for (int r = 0; r < ripeNodes.size(); r++) {
@@ -458,12 +472,19 @@ class ParsimonyTree {
 			ripeNodes = GetRipeNodes();
 		}
 		
+		Set<Integer> listOfFixedLeaves = new HashSet<Integer>();
 		for (int i = nodeList.size()-1; i >= leafCount; i--) {
 			ParsimonyNode parent = nodeList.get(i);
-			ParsimonyNode daughter = parent.connection[0];
-			ParsimonyNode son = parent.connection[1];
-			ChangeLabel(parent, daughter);
-			ChangeLabel(parent, son);
+			for (int j = 0; j < parent.connection.length; j++) {
+				if (parent.connection[j] == null) {
+					continue;
+				}
+				int childIndex = parent.connection[j].index;
+				if (!listOfFixedLeaves.contains(childIndex)) {
+					ChangeLabel(parent, nodeList.get(childIndex));
+					listOfFixedLeaves.add(parent.connection[j].index);
+				}				
+			}
 		}
 	}
 	
@@ -520,7 +541,8 @@ class ParsimonyTree {
 	 */
 	public int GetMinimumScore(boolean isRooted) {
 		ComputeEdges(isRooted);
-		int score = nodeList.get(nodeList.size()-1).GetNodeScore();
+		Set<Integer> traversedNodes = new HashSet<Integer>();
+		int score = nodeList.get(nodeList.size()-1).GetNodeScore(traversedNodes);
 		if (!isRooted) {
 			score -= nodeList.get(tempRootInsPoint.nodeA).edgeScore;
 		}
@@ -578,7 +600,7 @@ class ParsimonyTree {
 				key = AddEdge(parent.connection[2], parent);
 				parent.connection[2].edgeScore = edgeList.get(key).GetHammingDist();
 			}
-		}	
+		}
 	}
 	
 	/**
@@ -603,15 +625,7 @@ class ParsimonyTree {
 			sb.append(minParsimonyScore);
 			sb.append(System.getProperty("line.separator"));
 		}
-		// commented code is for sorting by left node (the a in a -> b)
-		// this is not needed but makes the list easier to check when there are a lot of nodes
-		/*Comparator<ParsimonyEdge> byNodeA = new Comparator<ParsimonyEdge>() {
-	        @Override
-	        public int compare(ParsimonyEdge edge1, ParsimonyEdge edge2) {
-	        	return edge1.left.compareTo(edge2.left);
-	        }
-	    };
-		Collections.sort(edgeList, byNodeA);*/
+
 		for (String key : edgeList.keySet()) {
 			sb.append(edgeList.get(key));
 			sb.append(System.getProperty("line.separator"));
@@ -707,24 +721,55 @@ class ParsimonyNode {
 		nodeCopy.edgeScore = this.edgeScore;
 		return nodeCopy;
 	}
+	
+	private int NonNullConnectionCount() {
+		int count = 0;
+		for (int i = 0; i < connection.length; i++) {
+			if (connection[i] != null) {
+				count++;
+			}
+		}
+		return count;
+	}
 
 	public boolean isLeaf() {
-		return connection[1] == null;
+		return NonNullConnectionCount() == 1;
 	}
 	
 	public boolean isRoot() {
-		return connection[2] == null;
+		return NonNullConnectionCount() == 2;
 	}
 	
 	public boolean isRipe() {
-		return tag == 0 && connection[0].tag == 1 && connection[1].tag == 1;
+		for (int i = 0; i < connection.length; i++) {
+			if (connection[0] != null && !connection[0].isTagged()) {
+				return false;
+			}
+		}
+		return tag == 0;
 	}
 	
-	public int GetNodeScore() {
+	/**
+	 * if non-leaf, mark as tagged without checking for the value of tag
+	 * if leaf, only mark as tagged if value of tag is 1
+	 **/
+	public boolean isTagged() {
+		return (isLeaf() && tag == 1) || (!isLeaf());
+	}
+	
+	public int GetNodeScore(Set<Integer> traversedNodes) {
+		traversedNodes.add(index);
 		if (isLeaf()) {
 			return 0;
 		} else {
-			return connection[0].edgeScore + connection[1].edgeScore + connection[0].GetNodeScore() + connection[1].GetNodeScore();
+			int runningScore = 0;
+			for (int i = 0; i < connection.length; i++) {
+				if (connection[i] != null && !traversedNodes.contains(connection[i].index)) {
+					runningScore = runningScore + connection[i].edgeScore + connection[i].GetNodeScore(traversedNodes);
+					traversedNodes.add(connection[i].index);
+				}
+			}
+			return runningScore;
 		}
 	}
 	
