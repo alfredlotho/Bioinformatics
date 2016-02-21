@@ -41,7 +41,7 @@ public class Parsimony {
 						treeList.put(j, new ParsimonyTree(leafCount));
 					}
 					
-				}
+				} 
 				mainTree.AddNode(i-1, -1, childLabel);
 				mainTree.AddNode(parentIndex, i-1, "");
 				
@@ -68,6 +68,15 @@ public class Parsimony {
 		BioinformaticsCommon.WriteOutputToFile(sb.toString());
 	}
 	
+	private int InitiateTreeList(Map<Integer, ParsimonyTree> treeList, ParsimonyTree mainTree, String dnaString, int leafCount) {
+		int dnaLength = dnaString.length();
+		treeList.put(0, mainTree);
+		for (int j = 1; j <= dnaLength; j++) {
+			treeList.put(j, new ParsimonyTree(leafCount));
+		}
+		return dnaLength;
+	}
+	
 	public ParsimonyTree UnrootedSmallParsimony(List<String> lines) {
 		treeList = new HashMap<Integer, ParsimonyTree>();
 		int leafCount = Integer.parseInt(lines.get(0));
@@ -79,21 +88,20 @@ public class Parsimony {
 			StringTokenizer st = new StringTokenizer(lines.get(i), BioinformaticsCommon.NODE_SEPARATOR);
 			String leftElem = st.nextToken();
 			if (!BioinformaticsCommon.isInteger(leftElem)) {
+				if (dnaLength == 0) {
+					dnaLength = InitiateTreeList(treeList, mainTree, leftElem, leafCount);
+				}
 				continue; //ignore this line if it starts with the dna string since this is a duplicate edge
 			}
 			parentIndex = Integer.parseInt(leftElem);
 			String childLabel = st.nextToken();
 			if (!BioinformaticsCommon.isInteger(childLabel)) {
 				leafIndex++;
-					
+				
 				if (dnaLength == 0) {
-					dnaLength = childLabel.length();
-					treeList.put(0, mainTree);
-					for (int j = 1; j <= dnaLength; j++) {
-						treeList.put(j, new ParsimonyTree(leafCount));
-					}
-					
+					dnaLength = InitiateTreeList(treeList, mainTree, leftElem, leafCount);
 				}
+				
 				mainTree.AddNode(leafIndex, -1, childLabel);
 				mainTree.AddNode(parentIndex, leafIndex, "");
 				
@@ -110,7 +118,7 @@ public class Parsimony {
 				}
 			}
 		}
-						
+		
 		// add the final root index that will be removed later
 		parentIndex = mainTree.nodeList.size();
 		// connect daughter and son node to temporary root node
@@ -157,8 +165,7 @@ public class Parsimony {
 				mainTree.nodeList.get(m).label += treeList.get(k).nodeList.get(m).label;
 			}
 		}
-		//mainTree.PrintNodes();
-		
+		//treeList.get(0).PrintNodes();
 		return mainTree;
 	}
 	
@@ -330,26 +337,20 @@ public class Parsimony {
 		ParsimonyTree tree = UnrootedSmallParsimony(lines);
 		int newScore = tree.GetMinimumScore(false);
 		ParsimonyTree newTree = tree;
-		tree.PrintNodes();
 		while (newScore < score) {
 			score = newScore;
 			tree = newTree;
 			int neighborScore;
 			ParsimonyTree neighborTree;
-			System.out.println("while runs...");
 			for (String key : tree.edgeList.keySet()) {
 				ParsimonyEdge currEdge = tree.edgeList.get(key);
-				System.out.println("edge for runs..." +currEdge.isInternal +" " +currEdge.nodeA +" " +currEdge.nodeB);
 				if (currEdge.isInternal) {
 					for (int switchIndex = 0; switchIndex <= 1; switchIndex++) {
 						dnaLength = 0; //reset
-						tree.PrintNodes();
-						AssignThirdConnectedNode(tree); //TODO
 						ParsimonyTree switchedTree = SwitchSubtrees(tree, currEdge.nodeA, currEdge.nodeB, switchIndex);
-						System.out.println("switching trees " +switchIndex +" " +currEdge.nodeA +" " +currEdge.nodeB);
-						switchedTree.PrintNodes();
 						neighborTree = UnrootedSmallParsimony(switchedTree.TreeToAdjacencyList());
 						neighborScore = neighborTree.GetMinimumScore(false);
+						System.out.println(neighborScore);
 						if (neighborScore < newScore) {
 							newScore = neighborScore;
 							newTree = neighborTree;
@@ -358,6 +359,7 @@ public class Parsimony {
 				}
 			}
 			newTree.PrintEdges(false, true, sb);
+			System.out.println(sb.toString());
 		}
 		BioinformaticsCommon.WriteOutputToFile(sb.toString());
 	}
