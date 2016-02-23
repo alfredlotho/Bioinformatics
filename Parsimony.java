@@ -79,8 +79,8 @@ public class Parsimony {
 	}
 	
 	public ParsimonyTree UnrootedSmallParsimony(List<String> lines) {
-		/*int maxIncrementor = ((lines.size() - 1)/2) - Integer.parseInt(lines.get(0));
-		Map<Integer, ParsimonyTree> treeCollection = new HashMap<Integer, ParsimonyTree>();
+		int maxIncrementor = ((lines.size() - 1)/2) - Integer.parseInt(lines.get(0));
+		/*Map<Integer, ParsimonyTree> treeCollection = new HashMap<Integer, ParsimonyTree>();
 		for (int i = 0; i <= maxIncrementor; i++) {
 			ParsimonyTree currTree = UnrootedSmallParsimony(lines, i);
 			int score = currTree.GetMinimumScore(false);
@@ -94,8 +94,8 @@ public class Parsimony {
 	    };
 	    List<Map.Entry<Integer, ParsimonyTree>> list = new ArrayList<Map.Entry<Integer, ParsimonyTree>>(treeCollection.entrySet());
 	    Collections.sort(list, byScore);
-		return list.get(0).getValue();*/
-		return UnrootedSmallParsimony(lines, 1);
+	    return list.get(0).getValue();*/
+		return UnrootedSmallParsimony(lines, maxIncrementor);
 	}
 	
 	public ParsimonyTree UnrootedSmallParsimony(List<String> lines, int incrementor) {
@@ -384,10 +384,6 @@ public class Parsimony {
 		ParsimonyTree tree = UnrootedSmallParsimony(lines);
 		int newScore = tree.GetMinimumScore(false);
 		ParsimonyTree newTree = tree;
-		newTree.PrintNodes();/*StringBuffer temp = new StringBuffer();
-		newTree.PrintEdges(false, true, temp);
-		System.out.println(temp.toString());*/ //TODO Delete
-		System.out.println("orig score: " +newScore);
 		while (newScore < score) {
 			System.out.println("while...");
 			score = newScore;
@@ -399,15 +395,10 @@ public class Parsimony {
 					for (int switchIndex = 0; switchIndex <= 1; switchIndex++) {
 						dnaLength = 0; //reset
 						ParsimonyTree switchedTree = SwitchSubtrees(tree, currEdge.nodeA, currEdge.nodeB, switchIndex);
-						/*System.out.println("perform " +switchIndex +" switch on " +currEdge.nodeA +" and " +currEdge.nodeB);
-						switchedTree.PrintNodes(); // TODO delete
-						/*System.out.println("printing adjacency list");
-						for (String line : switchedTree.TreeToAdjacencyList()) {
-							System.out.println(line);
-						}*/ //TODO Delete
 						ParsimonyTree neighborTree = UnrootedSmallParsimony(switchedTree.TreeToAdjacencyList());
 						neighborScore = neighborTree.GetMinimumScore(false);
 						System.out.println(neighborScore +" of " +currEdge.nodeA +":" +currEdge.nodeB);
+						//neighborTree.PrintEdges(false, true, temp);
 						if (neighborScore < newScore) {
 							newScore = neighborScore;
 							newTree = neighborTree;
@@ -416,13 +407,12 @@ public class Parsimony {
 				}
 			}
 			if (newScore < score) {
-				newTree.PrintNodes();
 				newTree.PrintEdges(false, true, sb);
 				sb.append(System.getProperty("line.separator"));
-				//System.out.println(sb.toString());
 			}
-			
 		}
+		if (sb.toString().trim().length() == 0)
+			newTree.PrintEdges(false, true, sb);
 		BioinformaticsCommon.WriteOutputToFile(sb.toString());
 	}
 }
@@ -537,6 +527,8 @@ class ParsimonyTree {
 		}
 		
 		Set<Integer> listOfFixedLeaves = new HashSet<Integer>();
+		//PrintNodes();
+		//System.out.println("Leaves fixing");
 		for (int i = nodeList.size()-1; i >= leafCount; i--) {
 			ParsimonyNode parent = nodeList.get(i);
 			for (int j = 0; j < parent.connection.length; j++) {
@@ -562,7 +554,9 @@ class ParsimonyTree {
 	private void ChangeLabel(ParsimonyNode parent, ParsimonyNode child) {
 		boolean isSet = false;
 		if (child.label.length() > 1 && !child.isLeaf()) {
-			char parentChar = parent.label.charAt(0);
+			int selParentCharIndex = BioinformaticsCommon.RandomWithRange(0, parent.label.length()-1);
+			char parentChar = parent.label.charAt(selParentCharIndex);
+			//System.out.println("fixing " +child.index +" by using " +parentChar +" from parent#" +parent.index);
 			char[] choices = child.label.toCharArray();
 			for (int c = 0; c < choices.length; c++) {
 				if (choices[c] == parentChar) {
@@ -572,7 +566,7 @@ class ParsimonyTree {
 				}
 			}
 			if (!isSet) {
-				int start = 0;
+				int start = BioinformaticsCommon.RandomWithRange(0, child.label.length()-1);
 				child.label = child.label.substring(start,start+1);
 			}
 		}
@@ -606,12 +600,17 @@ class ParsimonyTree {
 	 */
 	public int GetMinimumScore(boolean isRooted) {
 		ComputeEdges(isRooted);
-		Set<Integer> traversedNodes = new HashSet<Integer>();
+		/*Set<Integer> traversedNodes = new HashSet<Integer>();
 		int score = nodeList.get(nodeList.size()-1).GetNodeScore(traversedNodes);
 		if (!isRooted && tempRootInsPoint != null) {
 			score -= nodeList.get(tempRootInsPoint.nodeA).edgeScore;
 		}
-		return score;
+		return score;*/
+		int score = 0;
+		for (String key : edgeList.keySet()) {
+			score += edgeList.get(key).hammingDist;
+		}
+		return score/2;
 	}
 	
 	/**
@@ -626,7 +625,7 @@ class ParsimonyTree {
 			ParsimonyEdge newEdge = new ParsimonyEdge(nodeALabel, nodeBLabel, nodeA.index, nodeB.index);
 			newEdge.isInternal = !nodeA.isLeaf() && !nodeB.isLeaf();
 			edgeList.put(key, newEdge);
-			
+			nodeA.edgeScore = edgeList.get(key).GetHammingDist();			
 		} else {
 			//System.out.println("duplicate: " +key);
 		}
@@ -648,22 +647,17 @@ class ParsimonyTree {
 			String key; 
 			if (!isRooted && i == nodeList.size() - 1) {	//if temporary root node of unrooted tree
 				key = AddEdge(parent.connection[0], parent.connection[1]);
-				parent.connection[0].edgeScore = edgeList.get(key).GetHammingDist();
 				key = AddEdge(parent.connection[1], parent.connection[0]);
-				parent.connection[1].edgeScore = edgeList.get(key).GetHammingDist();
 				// remove all edges connected to the temporary root
 				RemoveEdgeAndInverse(parent, parent.connection[0]);
 				RemoveEdgeAndInverse(parent, parent.connection[1]);
 			} else {
 				AddEdge(parent, parent.connection[0]);
 				key = AddEdge(parent.connection[0], parent);
-				parent.connection[0].edgeScore = edgeList.get(key).GetHammingDist();
 				AddEdge(parent, parent.connection[1]);
 				key = AddEdge(parent.connection[1], parent);
-				parent.connection[1].edgeScore = edgeList.get(key).GetHammingDist();
 				AddEdge(parent, parent.connection[2]);
 				key = AddEdge(parent.connection[2], parent);
-				parent.connection[2].edgeScore = edgeList.get(key).GetHammingDist();
 			}
 		}
 	}
