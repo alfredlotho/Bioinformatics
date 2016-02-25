@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -15,10 +16,14 @@ public class ComputationalProteomics {
 		spectrum.add(new SpectrumNode(0));
 		
 		// test for constructing the graph of a spectrum
-		List<SpectrumEdge> graph = ConstructSpectrumGraph(lines.get(0), spectrum);
+		/*List<SpectrumEdge> graph = ConstructSpectrumGraph(lines.get(0), spectrum);
 		for (int i = 0; i < graph.size(); i++) {
 			System.out.println(graph.get(i));
-		}	
+		}*/
+		
+		// test for generating ideal spectrum from peptide string
+		String temp = BioinformaticsCommon.joinList(IdealSpectrum("NQEL"), " ").trim();
+		System.out.println(temp);
 	}
 	
 	/**
@@ -42,7 +47,32 @@ public class ComputationalProteomics {
 		}
 		
 		return graph;
-	}	
+	}
+	
+	/**
+	 * Generates the ideal spectrum from a string peptide
+	 * @param peptide - an amino acid string
+	 * @return
+	 */
+	private static List<Integer> IdealSpectrum(String peptide) {
+		List<Integer> idealSpectrum = new ArrayList<Integer>();
+		List<Integer> masses = new ArrayList<Integer>();
+		
+		masses.add(0);
+		char[] acids = peptide.toCharArray();
+		for (int i = 1; i <= acids.length; i++) {
+			masses.add(i, masses.get(i-1) + BioinformaticsCommon.MASS_LIST.get(acids[i-1]+""));
+		}
+		
+		idealSpectrum.add(0);
+		for (int i = 0; i < masses.size(); i++) {
+			for (int j = i+1; j < masses.size(); j++) {
+				idealSpectrum.add(masses.get(j) - masses.get(i));
+			}
+		}
+		Collections.sort(idealSpectrum);
+		return idealSpectrum;
+	}
 }
 
 class SpectrumNode {
