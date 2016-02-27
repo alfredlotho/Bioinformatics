@@ -22,8 +22,14 @@ public class ComputationalProteomics {
 		}*/
 		
 		// test for generating ideal spectrum from peptide string
-		String temp = BioinformaticsCommon.joinList(IdealSpectrum("NQEL"), " ").trim();
-		System.out.println(temp);
+		//String temp = BioinformaticsCommon.joinList(IdealSpectrum("NQEL"), " ").trim();
+		//System.out.println(temp);
+		
+		// test for decoding an ideal spectrum
+		List<SpectrumEdge> graph = ConstructSpectrumGraph(lines.get(0), spectrum);
+		String peptide = DecodingIdealSpectrum(graph, spectrum);
+		System.out.println(peptide);
+		
 	}
 	
 	/**
@@ -73,6 +79,47 @@ public class ComputationalProteomics {
 		Collections.sort(idealSpectrum);
 		return idealSpectrum;
 	}
+	
+	private static void DFS(List<SpectrumEdge> graph, int currNode, int targetNode, String currStr, List<String> strList) {
+		boolean backtrackMarker = false;
+		for (int i = 0; i < graph.size(); i++) {
+			if (graph.get(i).nodeA.mass == currNode) {
+				if (backtrackMarker) {
+					currStr = currStr.substring(0, currStr.length()-1);
+				} else {
+					backtrackMarker = true;
+				}
+				currStr += graph.get(i).aminoAcid;
+				if (graph.get(i).nodeB.mass == targetNode) {
+					strList.add(currStr);
+				} else {
+					DFS(graph, graph.get(i).nodeB.mass, targetNode, currStr, strList);
+				}
+			}
+			
+		}
+	}
+	
+	private static String DecodingIdealSpectrum(List<SpectrumEdge> graph, List<SpectrumNode> spectrum) {
+		List<String> strList = new ArrayList<String>();
+		DFS(graph, 0, graph.get(graph.size()-1).nodeB.mass, "", strList);
+		for (int i = 0; i < strList.size(); i++) {
+			List<Integer> idealSpectrum = IdealSpectrum(strList.get(i));
+			boolean isSubset = true;
+			for (int j = 0; j < spectrum.size(); j++) {
+				if (!idealSpectrum.contains(spectrum.get(j).mass)) {
+					isSubset = false;
+					break;
+				}
+			}
+			if (isSubset) {
+				return strList.get(i);
+			}
+		}
+		return "no matching ideal spectrum";
+	}
+	
+
 }
 
 class SpectrumNode {
