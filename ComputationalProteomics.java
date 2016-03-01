@@ -5,7 +5,6 @@ import java.util.StringTokenizer;
 
 public class ComputationalProteomics {
 	
-	
 	public static void main(String[] args) {
 		// common
 		String path = "C:\\Users\\Timothy\\Desktop\\temp\\bioinformatics\\dataset_a_b.txt";
@@ -26,10 +25,13 @@ public class ComputationalProteomics {
 		//System.out.println(temp);
 		
 		// test for decoding an ideal spectrum
-		List<SpectrumEdge> graph = ConstructSpectrumGraph(lines.get(0), spectrum);
+		/*List<SpectrumEdge> graph = ConstructSpectrumGraph(lines.get(0), spectrum);
 		String peptide = DecodingIdealSpectrum(graph, spectrum);
-		System.out.println(peptide);
+		System.out.println(peptide);*/
 		
+		// test for converting a peptide to a peptide vector
+		String temp = BioinformaticsCommon.joinList(ConvertToPeptideVector(lines.get(0)), " ");
+		BioinformaticsCommon.WriteOutputToFile(temp);
 	}
 	
 	/**
@@ -100,6 +102,12 @@ public class ComputationalProteomics {
 		}
 	}
 	
+	/**
+	 * Generates the peptide string that explains the spectrum
+	 * @param graph - the list of edges generated from the spectrum
+	 * @param spectrum - a list of integer masses
+	 * @return
+	 */
 	private static String DecodingIdealSpectrum(List<SpectrumEdge> graph, List<SpectrumNode> spectrum) {
 		List<String> strList = new ArrayList<String>();
 		DFS(graph, 0, graph.get(graph.size()-1).nodeB.mass, "", strList);
@@ -119,6 +127,26 @@ public class ComputationalProteomics {
 		return "no matching ideal spectrum";
 	}
 	
+	/**
+	 * Converts a peptide into a peptide vector
+	 * @param peptide - an amino acid string
+	 * @return a list of integers containing 1 at each of the prefix coordinates (the array index pertaining to the mass of the peptide) and 0 otherwise
+	 */
+	private static List<Integer> ConvertToPeptideVector(String peptide) {
+		List<Integer> peptideVector = new ArrayList<Integer>();
+		for (int i = 0; i < peptide.length(); i++) {
+			String aminoAcid = peptide.substring(i, i+1);
+			int mass = BioinformaticsCommon.MASS_LIST.get(aminoAcid);
+			for (int j = 0; j < mass; j++) {
+				if (j == mass-1) {
+					peptideVector.add(1);
+				} else {
+					peptideVector.add(0);
+				}
+			}
+		}
+		return peptideVector;
+	}
 
 }
 
