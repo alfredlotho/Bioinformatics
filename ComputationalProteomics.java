@@ -30,8 +30,12 @@ public class ComputationalProteomics {
 		System.out.println(peptide);*/
 		
 		// test for converting a peptide to a peptide vector
-		String temp = BioinformaticsCommon.joinList(ConvertToPeptideVector(lines.get(0)), " ");
-		BioinformaticsCommon.WriteOutputToFile(temp);
+		//String temp = BioinformaticsCommon.joinList(ConvertToPeptideVector(lines.get(0)), " ");
+		//BioinformaticsCommon.WriteOutputToFile(temp);
+		
+		// test for converting peptide vector into an amino acid string
+		String temp = ConvertToPeptide(lines.get(0));
+		System.out.println(temp);
 	}
 	
 	/**
@@ -146,6 +150,26 @@ public class ComputationalProteomics {
 			}
 		}
 		return peptideVector;
+	}
+	
+	/**
+	 * Converts a peptide vector into an amino acid string
+	 * @param peptideVector - a list of integers containing 1 at each of the prefix coordinates (the array index pertaining to the mass of the peptide) and 0 otherwise
+	 * @return the amino acid string that represents this peptide vector
+	 */
+	private static String ConvertToPeptide(String peptideVector) {
+		String peptide = "";
+		StringTokenizer st = new StringTokenizer(peptideVector);
+		int index = 0;
+		while (st.hasMoreTokens()) {
+			index++;
+			String token = st.nextToken();
+			if ("1".equals(token)) {
+				peptide += BioinformaticsCommon.MASS_LIST_REV.get(index);
+				index = 0;
+			}
+		}
+		return peptide;
 	}
 
 }
