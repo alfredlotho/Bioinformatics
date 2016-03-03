@@ -34,8 +34,13 @@ public class ComputationalProteomics {
 		//BioinformaticsCommon.WriteOutputToFile(temp);
 		
 		// test for converting peptide vector into an amino acid string
-		String temp = ConvertToPeptide(lines.get(0));
-		System.out.println(temp);
+		/*String temp = ConvertToPeptide(lines.get(0));
+		System.out.println(temp);*/
+		
+		// test for peptide sequencing
+		List<SpectrumEdge> edges = ConstructAllSimplePaths(lines.get(0), spectrum);
+		String peptide = PeptideSequencing(spectrum, edges);
+		System.out.println(peptide);
 	}
 	
 	/**
@@ -171,14 +176,95 @@ public class ComputationalProteomics {
 		}
 		return peptide;
 	}
-
+	
+	/**
+	 * Connect all pairs of nodes with index difference that is in the list of integer protein masses
+	 * @param spectrumStr - a space delimeted spectral vector
+	 * @param spectrum - a storage list for each score in spectrumStr; already contains 0 as the first element
+	 * @return
+	 */
+	private static List<SpectrumEdge> ConstructAllSimplePaths(String spectrumStr, List<SpectrumNode> spectrum) {
+		StringTokenizer st = new StringTokenizer(spectrumStr);
+		int index = 0;
+		while (st.hasMoreTokens()) {
+			spectrum.add(new SpectrumNode(Integer.parseInt(st.nextToken()), ++index));
+		}
+		List<SpectrumEdge> graph = new ArrayList<SpectrumEdge>();
+		
+		for (int i = 0; i < spectrum.size(); i++) {
+			for (int j = i+1; j < spectrum.size(); j++) {
+				int nodeDiff = j - i;
+				if (BioinformaticsCommon.MASS_LIST_REV.containsKey(nodeDiff)) {
+					graph.add(new SpectrumEdge(spectrum.get(i), spectrum.get(j), BioinformaticsCommon.MASS_LIST_REV.get(nodeDiff)));
+				}
+			}
+		}
+		return graph;
+	}
+	
+	/**
+	 * Using the Bellman-Ford algorithm to solve for the longest path (by negating the mass), get an amino acid string that maximizes 
+	 * the score against an input spectral vector
+	 * @param vertices - space delimited spectral vector
+	 * @param edges - all the edges formed by connecting a pair of nodes with an index difference that is equivalent to any of the protein masses
+	 * @return an amino acid string that maximizes the score against the spectral vector
+	 */
+	private static String PeptideSequencing(List<SpectrumNode> vertices, List<SpectrumEdge> edges) {
+		int size = vertices.size();
+		int[] distance = new int[size];
+		int[] predecessor = new int[size];
+		final int INFINITY = 99999; //do not use Integer.MAX_VALUE
+		
+		for (int v = 0; v < size; v++) {
+			distance[v] = INFINITY;
+			predecessor[v] = -1;
+		}
+		
+		distance[0] = 0;
+		
+		for (int i = 0; i < size; i++) {
+			for (int j = 0; j < edges.size(); j++) {
+				SpectrumEdge edge = edges.get(j);
+				int u = edge.nodeA.index;
+				int v = edge.nodeB.index;
+				int w = -1 * edge.nodeB.mass;
+				if (/*u == i && */distance[u] + w < distance[v]) {
+					if (distance[u] == INFINITY)
+						distance[v] = INFINITY;
+					else
+						distance[v] = distance[u] + w;
+					predecessor[v] = u;
+				}
+			}
+		}
+		
+		
+		int lastIndexChecked = size-1;
+		String peptide = "";
+		int score = 0;
+		while (lastIndexChecked != 0) {
+			int mass = lastIndexChecked - predecessor[lastIndexChecked];
+			peptide = BioinformaticsCommon.MASS_LIST_REV.get(mass) + peptide;
+			//System.out.println(predecessor[lastIndexChecked] +" ~ " +lastIndexChecked +":" +distance[lastIndexChecked]);
+			score += distance[lastIndexChecked];
+			lastIndexChecked = predecessor[lastIndexChecked];
+		}
+		return peptide;
+	}
+	
 }
 
 class SpectrumNode {
 	int mass;
+	int index;
 	
 	public SpectrumNode(int mass) {
 		this.mass = mass;
+	}
+	
+	public SpectrumNode(int mass, int index) {
+		this.mass = mass;
+		this.index = index;
 	}
 }
 
