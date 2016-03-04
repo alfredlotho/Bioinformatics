@@ -1,6 +1,8 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 public class ComputationalProteomics {
@@ -38,8 +40,14 @@ public class ComputationalProteomics {
 		System.out.println(temp);*/
 		
 		// test for peptide sequencing
-		List<SpectrumEdge> edges = ConstructAllSimplePaths(lines.get(0), spectrum);
-		String peptide = PeptideSequencing(spectrum, edges);
+		/*EdgeMap edgeMap = ConstructAllSimplePaths(lines.get(0), spectrum);
+		PeptideBacktrack tracker = PeptideSequencing(spectrum, edgeMap);
+		System.out.println(tracker.peptide);*/
+		
+		// test for peptide identification inside a given proteome
+		EdgeMap edgeMap = ConstructAllSimplePaths(lines.get(0), spectrum);
+		String proteome = lines.get(1);
+		String peptide = PeptideIdentification(spectrum, edgeMap, proteome);
 		System.out.println(peptide);
 	}
 	
@@ -178,28 +186,47 @@ public class ComputationalProteomics {
 	}
 	
 	/**
+	 * Converts a peptide vector into an amino acid string
+	 * @param peptideVector - a list of integers containing 1 at each of the prefix coordinates (the array index pertaining to the mass of the peptide) and 0 otherwise
+	 * @return the amino acid string that represents this peptide vector
+	 */
+	private static String ConvertToPeptide(List<Integer> peptideVector) {
+		String peptide = "";
+		int index = 0;
+		for (int i = 0; i < peptideVector.size(); i++) {
+			if (peptideVector.get(i) == 1) {
+				String protein = BioinformaticsCommon.MASS_LIST_REV.get(i-index);
+				peptide += protein;
+				index = i;
+			}
+		}
+		return peptide;
+	}
+	
+	/**
 	 * Connect all pairs of nodes with index difference that is in the list of integer protein masses
 	 * @param spectrumStr - a space delimeted spectral vector
 	 * @param spectrum - a storage list for each score in spectrumStr; already contains 0 as the first element
 	 * @return
 	 */
-	private static List<SpectrumEdge> ConstructAllSimplePaths(String spectrumStr, List<SpectrumNode> spectrum) {
+	private static EdgeMap ConstructAllSimplePaths(String spectrumStr, List<SpectrumNode> spectrum) {
 		StringTokenizer st = new StringTokenizer(spectrumStr);
 		int index = 0;
 		while (st.hasMoreTokens()) {
 			spectrum.add(new SpectrumNode(Integer.parseInt(st.nextToken()), ++index));
 		}
 		List<SpectrumEdge> graph = new ArrayList<SpectrumEdge>();
-		
+		List<String> edgeIds = new ArrayList<String>();
 		for (int i = 0; i < spectrum.size(); i++) {
 			for (int j = i+1; j < spectrum.size(); j++) {
 				int nodeDiff = j - i;
 				if (BioinformaticsCommon.MASS_LIST_REV.containsKey(nodeDiff)) {
 					graph.add(new SpectrumEdge(spectrum.get(i), spectrum.get(j), BioinformaticsCommon.MASS_LIST_REV.get(nodeDiff)));
+					edgeIds.add(i + BioinformaticsCommon.NODE_SEPARATOR +j);
 				}
 			}
 		}
-		return graph;
+		return new EdgeMap(graph, edgeIds);
 	}
 	
 	/**
@@ -209,7 +236,7 @@ public class ComputationalProteomics {
 	 * @param edges - all the edges formed by connecting a pair of nodes with an index difference that is equivalent to any of the protein masses
 	 * @return an amino acid string that maximizes the score against the spectral vector
 	 */
-	private static String PeptideSequencing(List<SpectrumNode> vertices, List<SpectrumEdge> edges) {
+	private static PeptideBacktrack PeptideSequencing(List<SpectrumNode> vertices, EdgeMap edgeMap) {
 		int size = vertices.size();
 		int[] distance = new int[size];
 		int[] predecessor = new int[size];
@@ -223,12 +250,15 @@ public class ComputationalProteomics {
 		distance[0] = 0;
 		
 		for (int i = 0; i < size; i++) {
-			for (int j = 0; j < edges.size(); j++) {
-				SpectrumEdge edge = edges.get(j);
+			for (int j = 0; j < edgeMap.graph.size(); j++) {
+				SpectrumEdge edge = edgeMap.graph.get(j);
+				String edgeId = edgeMap.edgeIds.get(j);
+				if (edgeId == "")
+					continue;
 				int u = edge.nodeA.index;
 				int v = edge.nodeB.index;
 				int w = -1 * edge.nodeB.mass;
-				if (/*u == i && */distance[u] + w < distance[v]) {
+				if (distance[u] + w < distance[v]) {
 					if (distance[u] == INFINITY)
 						distance[v] = INFINITY;
 					else
@@ -245,13 +275,73 @@ public class ComputationalProteomics {
 		while (lastIndexChecked != 0) {
 			int mass = lastIndexChecked - predecessor[lastIndexChecked];
 			peptide = BioinformaticsCommon.MASS_LIST_REV.get(mass) + peptide;
-			//System.out.println(predecessor[lastIndexChecked] +" ~ " +lastIndexChecked +":" +distance[lastIndexChecked]);
+			String edgeId = predecessor[lastIndexChecked] +BioinformaticsCommon.NODE_SEPARATOR +lastIndexChecked;
+			int index = edgeMap.edgeIds.indexOf(edgeId);
+			edgeMap.edgeIds.set(index, "");
+			//System.out.println(index +" " +predecessor[lastIndexChecked] +" ~ " +lastIndexChecked +":" +distance[lastIndexChecked]);
 			score += distance[lastIndexChecked];
 			lastIndexChecked = predecessor[lastIndexChecked];
 		}
-		return peptide;
+		
+		return new PeptideBacktrack(peptide, predecessor, distance, -1*score);
 	}
 	
+	private static String PeptideIdentification(List<SpectrumNode> vertices, EdgeMap edgeMap, String proteome) {
+		/*PeptideBacktrack tracker = PeptideSequencing(vertices, edgeMap);
+		System.out.println(tracker.peptide +" " +tracker.score);
+		while (!proteome.contains(tracker.peptide)) {
+			tracker = PeptideSequencing(vertices, edgeMap);
+			System.out.println(tracker.peptide +" " +tracker.score);
+		}
+		return tracker;*/
+		
+		List<Integer> proteomeVector = ConvertToPeptideVector(proteome);
+		int peptideVectorLength = vertices.size();
+		int proteomeVectorLength = proteomeVector.size();
+		int currStart = 0;
+		int currEnd = peptideVectorLength;
+		while (currEnd < proteomeVectorLength) {
+			List<Integer> viewWindow = proteomeVector.subList(currStart, proteomeVectorLength);
+			viewWindow.add(0, 0);
+			if (proteomeVector.get(currEnd-1) == 1) {
+				String peptide = ConvertToPeptide(proteomeVector.subList(currStart, currEnd));
+				System.out.println(peptide);
+			}
+			currStart = currStart + viewWindow.indexOf(1)+1;
+			currEnd = currStart + peptideVectorLength;
+		}
+		
+		return ""; // return the peptide with the highest score here
+	}
+	
+}
+
+/**
+ * instead of creating a Map that will contain a list of spectrum edges and their corresponding ids in the form nodeA->nodeB, 
+ * create an object that will store a list of the ids and the edges separately. Using a map is a lot slower that using 2 lists.
+ */
+class EdgeMap {
+	List<SpectrumEdge> graph;
+	List<String> edgeIds;
+	
+	public EdgeMap(List<SpectrumEdge> graph, List<String> edgeIds) {
+		this.graph = graph;
+		this.edgeIds = edgeIds;
+	}
+}
+
+class PeptideBacktrack {
+	String peptide;
+	int[] predecessor;
+	int[] distance;
+	int score;
+	
+	public PeptideBacktrack(String peptide, int[] predecessor, int[] distance, int score) {
+		this.peptide = peptide;
+		this.predecessor = predecessor;
+		this.distance = distance;
+		this.score = score;
+	}
 }
 
 class SpectrumNode {
