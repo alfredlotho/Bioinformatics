@@ -300,18 +300,39 @@ public class ComputationalProteomics {
 		int proteomeVectorLength = proteomeVector.size();
 		int currStart = 0;
 		int currEnd = peptideVectorLength;
+		int bestScore = 0;
+		String bestPeptide = "";
 		while (currEnd < proteomeVectorLength) {
 			List<Integer> viewWindow = proteomeVector.subList(currStart, proteomeVectorLength);
 			viewWindow.add(0, 0);
 			if (proteomeVector.get(currEnd-1) == 1) {
-				String peptide = ConvertToPeptide(proteomeVector.subList(currStart, currEnd));
-				System.out.println(peptide);
+				List<Integer> peptideVector = proteomeVector.subList(currStart, currEnd);
+				String peptide = ConvertToPeptide(peptideVector);
+				int score = GetPeptideScore(peptideVector, vertices);
+				if (score > bestScore) {
+					bestScore = score;
+					bestPeptide = peptide;
+				}
 			}
 			currStart = currStart + viewWindow.indexOf(1)+1;
 			currEnd = currStart + peptideVectorLength;
 		}
 		
-		return ""; // return the peptide with the highest score here
+		return bestPeptide;
+	}
+	
+	private static int GetPeptideScore(List<Integer> peptideVector, List<SpectrumNode> spectrum) {
+		if (spectrum.size() != peptideVector.size())
+			return -1;
+		
+		int score = 0;
+		for (int i = 0; i < peptideVector.size(); i++) {
+			boolean include = peptideVector.get(i) == 1;
+			if (include) {
+				score += spectrum.get(i).mass;
+			}
+		}
+		return score;
 	}
 	
 }
