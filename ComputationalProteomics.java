@@ -302,6 +302,8 @@ public class ComputationalProteomics {
 		int currEnd = peptideVectorLength;
 		int bestScore = 0;
 		String bestPeptide = "";
+		int charIndex = 0;
+		int bestCharIndex = 0;
 		while (currEnd < proteomeVectorLength) {
 			List<Integer> viewWindow = proteomeVector.subList(currStart, proteomeVectorLength);
 			viewWindow.add(0, 0);
@@ -312,12 +314,16 @@ public class ComputationalProteomics {
 				if (score > bestScore) {
 					bestScore = score;
 					bestPeptide = peptide;
+					bestCharIndex = charIndex;
 				}
 			}
 			currStart = currStart + viewWindow.indexOf(1)+1;
 			currEnd = currStart + peptideVectorLength;
+			charIndex++;
 		}
 		
+		// to account for proteins with duplicate masses, extract the string from the actual proteome
+		bestPeptide = proteome.substring(bestCharIndex, bestCharIndex+bestPeptide.length());
 		return bestPeptide;
 	}
 	

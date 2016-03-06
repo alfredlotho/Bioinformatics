@@ -55,7 +55,8 @@ public class MolecularEvolution {
 		ParsimonyTree mainTree = p.UnrootedSmallParsimony(lines);
 		StringBuffer sb = new StringBuffer();
 		mainTree.PrintEdges(false, true, sb);
-		BioinformaticsCommon.WriteOutputToFile(sb.toString());*/
+		System.out.println(sb.toString());
+		/*BioinformaticsCommon.WriteOutputToFile(sb.toString());*/
 		
 		// test for getting the neighboring tree of a given tree by interchanging the nodes connected to an internal edge
 		/*Parsimony p = new Parsimony();
@@ -65,7 +66,6 @@ public class MolecularEvolution {
 		// test for neighbor interchange heuristic across all nodes/trees
 		Parsimony p = new Parsimony();
 		p.LargeParsimonyHeuristic(lines);
-		
 	}
 	
 	/**

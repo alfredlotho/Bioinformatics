@@ -341,6 +341,33 @@ public class BioinformaticsCommon {
 		MASS_LIST_TRIM.put("W",186);
 	}
 	
+	public static final Map<Integer, String> MASS_LIST_REV;
+	static
+	{
+		MASS_LIST_REV = new LinkedHashMap<Integer, String>();
+		MASS_LIST_REV.put(57,"G");
+		MASS_LIST_REV.put(71,"A");
+		MASS_LIST_REV.put(87,"S");
+		MASS_LIST_REV.put(97,"P");
+		MASS_LIST_REV.put(99,"V");
+		MASS_LIST_REV.put(101,"T");
+		MASS_LIST_REV.put(103,"C");
+		MASS_LIST_REV.put(113,"L"); //mass also used for I
+		MASS_LIST_REV.put(114,"N");
+		MASS_LIST_REV.put(115,"D");
+		MASS_LIST_REV.put(128,"Q"); //mass also used for K
+		MASS_LIST_REV.put(129,"E");
+		MASS_LIST_REV.put(131,"M");
+		MASS_LIST_REV.put(137,"H");
+		MASS_LIST_REV.put(147,"F");
+		MASS_LIST_REV.put(156,"R");
+		MASS_LIST_REV.put(163,"Y");
+		MASS_LIST_REV.put(186,"W");
+	}
+	
+	public static final int[] MASS_INT_LIST = {57, 71, 87, 97, 99, 101, 103, 113, 114, 115, 128, 129, 131, 137, 147, 156, 163, 186};
+	public static final int[] MASS_INT_LIST_WITH_DUPLICATES = {57, 71, 87, 97, 99, 101, 103, 113, 113, 114, 115, 128, 128, 129, 131, 137, 147, 156, 163, 186};
+	
 	private static String scoringMatrixPath = "C:\\Users\\Alfred\\Downloads\\";
 	private static String scoringMatrixType = "BLOSUM62";
 	public static void SetScoringMatrix(String id) {
