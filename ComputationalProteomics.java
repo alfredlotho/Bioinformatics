@@ -45,10 +45,15 @@ public class ComputationalProteomics {
 		System.out.println(tracker.peptide);*/
 		
 		// test for peptide identification inside a given proteome
-		EdgeMap edgeMap = ConstructAllSimplePaths(lines.get(0), spectrum);
+		/*EdgeMap edgeMap = ConstructAllSimplePaths(lines.get(0), spectrum);
 		String proteome = lines.get(1);
-		String peptide = PeptideIdentification(spectrum, edgeMap, proteome);
-		System.out.println(peptide);
+		PeptideBacktrack tracker = PeptideIdentification(spectrum, edgeMap, proteome);
+		System.out.println(tracker.peptide);*/
+		
+		// test for the PSM search 
+		List<String> PSMSet = PSMSearch(lines);
+		String psmListStr = BioinformaticsCommon.joinList(PSMSet, "\r\n");
+		System.out.println(psmListStr);
 	}
 	
 	/**
@@ -286,15 +291,7 @@ public class ComputationalProteomics {
 		return new PeptideBacktrack(peptide, predecessor, distance, -1*score);
 	}
 	
-	private static String PeptideIdentification(List<SpectrumNode> vertices, EdgeMap edgeMap, String proteome) {
-		/*PeptideBacktrack tracker = PeptideSequencing(vertices, edgeMap);
-		System.out.println(tracker.peptide +" " +tracker.score);
-		while (!proteome.contains(tracker.peptide)) {
-			tracker = PeptideSequencing(vertices, edgeMap);
-			System.out.println(tracker.peptide +" " +tracker.score);
-		}
-		return tracker;*/
-		
+	private static PeptideBacktrack PeptideIdentification(List<SpectrumNode> vertices, EdgeMap edgeMap, String proteome) {
 		List<Integer> proteomeVector = ConvertToPeptideVector(proteome);
 		int peptideVectorLength = vertices.size();
 		int proteomeVectorLength = proteomeVector.size();
@@ -324,9 +321,15 @@ public class ComputationalProteomics {
 		
 		// to account for proteins with duplicate masses, extract the string from the actual proteome
 		bestPeptide = proteome.substring(bestCharIndex, bestCharIndex+bestPeptide.length());
-		return bestPeptide;
+		return new PeptideBacktrack(bestPeptide, null, null, bestScore);
 	}
 	
+	/**
+	 * Gets the dot product of the peptide vector and the spectral vector
+	 * @param peptideVector
+	 * @param spectrum
+	 * @return
+	 */
 	private static int GetPeptideScore(List<Integer> peptideVector, List<SpectrumNode> spectrum) {
 		if (spectrum.size() != peptideVector.size())
 			return -1;
@@ -339,6 +342,24 @@ public class ComputationalProteomics {
 			}
 		}
 		return score;
+	}
+	
+	private static List<String> PSMSearch(List<String> lines) {
+		List<String> PSMSet = new ArrayList<String>();
+		String proteome = lines.get(lines.size()-2);
+		int threshold = Integer.parseInt(lines.get(lines.size()-1));
+		
+		for (int i = 0; i < lines.size() - 2; i++) {
+			List<SpectrumNode> spectrum = new ArrayList<SpectrumNode>();
+			spectrum.add(new SpectrumNode(0));
+			EdgeMap edgeMap = ConstructAllSimplePaths(lines.get(i), spectrum);
+			PeptideBacktrack tracker = PeptideIdentification(spectrum, edgeMap, proteome);
+			if (tracker.score >= threshold) {
+				PSMSet.add(tracker.peptide);
+			}
+		}
+		
+		return PSMSet;
 	}
 	
 }
