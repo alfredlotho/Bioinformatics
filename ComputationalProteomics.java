@@ -51,9 +51,16 @@ public class ComputationalProteomics {
 		System.out.println(tracker.peptide);*/
 		
 		// test for the PSM search 
-		List<String> PSMSet = PSMSearch(lines);
+		/*List<String> PSMSet = PSMSearch(lines);
 		String psmListStr = BioinformaticsCommon.joinList(PSMSet, "\r\n");
-		System.out.println(psmListStr);
+		System.out.println(psmListStr);*/
+		
+		// test for getting the size of a spectral dictionary given a spectral vector and a thresshold
+		String spectrumStr = lines.get(0);
+		int threshhold = Integer.parseInt(lines.get(1));
+		int maxScore = Integer.parseInt(lines.get(2));
+		int spectralDictSize = SpectralDictionarySize(spectrumStr, threshhold, maxScore);
+		System.out.println(spectralDictSize);
 	}
 	
 	/**
@@ -362,6 +369,47 @@ public class ComputationalProteomics {
 		return PSMSet;
 	}
 	
+	private static int SpectralDictionarySize(String spectrumStr, int threshhold, int maxScore) {
+		StringTokenizer st = new StringTokenizer(spectrumStr);
+		int width = st.countTokens() + 1;
+		List<SpectrumNode> spectrum = new ArrayList<SpectrumNode>();
+		spectrum.add(new SpectrumNode(0, 0)); 
+		int index = 0;
+		while (st.hasMoreTokens()) {
+			spectrum.add(new SpectrumNode(Integer.parseInt(st.nextToken()), ++index));
+		}
+		int[][] dict = new int[maxScore][width];
+		
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < maxScore; j++) {
+				if (i == 0 && j == 0) { // the empty peptide counts as 1
+					dict[i][j] = 1;
+				} else if (i < BioinformaticsCommon.MASS_INT_LIST_WITH_DUPLICATES[0]) { //57 is the lowest mass for the 20 amino acids
+					dict[i][j] = 0;
+				} else {
+					int score = 0;
+					for (int k = 0; k < BioinformaticsCommon.MASS_INT_LIST_WITH_DUPLICATES.length; k++) {
+						int prevMass = i - BioinformaticsCommon.MASS_INT_LIST_WITH_DUPLICATES[k];
+						if (prevMass >= 0) {
+							int prevScore = j - spectrum.get(i).mass;
+							if (prevScore >= 0 && prevScore < maxScore && dict[prevScore][prevMass] > 0) {
+								score += dict[prevScore][prevMass];
+							}
+						}
+						
+					}
+					dict[j][i] = score;
+				}
+			}
+		}
+		
+		int sum = 0;
+		for (int i = threshhold; i < maxScore; i++) {
+			sum += dict[i][width-1];
+		}
+		
+		return sum;
+	}
 }
 
 /**
