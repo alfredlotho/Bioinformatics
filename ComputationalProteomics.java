@@ -55,12 +55,19 @@ public class ComputationalProteomics {
 		String psmListStr = BioinformaticsCommon.joinList(PSMSet, "\r\n");
 		System.out.println(psmListStr);*/
 		
-		// test for getting the size of a spectral dictionary given a spectral vector and a thresshold
-		String spectrumStr = lines.get(0);
-		int threshhold = Integer.parseInt(lines.get(1));
+		// test for getting the size of a spectral dictionary given a spectral vector and a threshold
+		/*String spectrumStr = lines.get(0);
+		int threshold = Integer.parseInt(lines.get(1));
 		int maxScore = Integer.parseInt(lines.get(2));
-		int spectralDictSize = SpectralDictionarySize(spectrumStr, threshhold, maxScore);
-		System.out.println(spectralDictSize);
+		int spectralDictSize = SpectralDictionarySize(spectrumStr, threshold, maxScore);
+		System.out.println(spectralDictSize);*/
+		
+		// test for getting the probability that an amino acid string appearing in the spectral dictionary
+		String spectrumStr = lines.get(0);
+		int threshold = Integer.parseInt(lines.get(1));
+		int maxScore = Integer.parseInt(lines.get(2));
+		double spectralDictProb = SpectralDictionaryProbability(spectrumStr, threshold, maxScore);
+		System.out.println(spectralDictProb);
 	}
 	
 	/**
@@ -369,7 +376,15 @@ public class ComputationalProteomics {
 		return PSMSet;
 	}
 	
-	private static int SpectralDictionarySize(String spectrumStr, int threshhold, int maxScore) {
+	/**
+	 * Counts the number of amino acid strings that can explain the spectrum and which has a score grater than or equal 
+	 * to threshold but less than maxScore
+	 * @param spectrumStr - a spectral vector containing space delimeted integer masses
+	 * @param threshold - the minimum score for an amino acid string to qualify as valid
+	 * @param maxScore - the maximum score for an amino acid string to qualify as valid
+	 * @return
+	 */
+	private static int SpectralDictionarySize(String spectrumStr, int threshold, int maxScore) {
 		StringTokenizer st = new StringTokenizer(spectrumStr);
 		int width = st.countTokens() + 1;
 		List<SpectrumNode> spectrum = new ArrayList<SpectrumNode>();
@@ -404,11 +419,61 @@ public class ComputationalProteomics {
 		}
 		
 		int sum = 0;
-		for (int i = threshhold; i < maxScore; i++) {
+		for (int i = threshold; i < maxScore; i++) {
 			sum += dict[i][width-1];
 		}
 		
 		return sum;
+	}
+	
+	/**
+	 * Gets the probability that an amino acid string, which has a score grater than or equal to threshold but less than maxScore,
+	 * matches a string inside the spectral dictionary
+	 * @param spectrumStr - a spectral vector containing space delimeted integer masses
+	 * @param threshold - the minimum score for an amino acid string to qualify as valid
+	 * @param maxScore - the maximum score for an amino acid string to qualify as valid
+	 * @return
+	 */
+	private static double SpectralDictionaryProbability(String spectrumStr, int threshold, int maxScore) {
+		StringTokenizer st = new StringTokenizer(spectrumStr);
+		int width = st.countTokens() + 1;
+		List<SpectrumNode> spectrum = new ArrayList<SpectrumNode>();
+		spectrum.add(new SpectrumNode(0, 0)); 
+		int index = 0;
+		while (st.hasMoreTokens()) {
+			spectrum.add(new SpectrumNode(Integer.parseInt(st.nextToken()), ++index));
+		}
+		double[][] dict = new double[maxScore][width];
+		
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < maxScore; j++) {
+				if (i == 0 && j == 0) { // the empty peptide counts as 1
+					dict[i][j] = 1;
+				} else if (i < BioinformaticsCommon.MASS_INT_LIST_WITH_DUPLICATES[0]) { //57 is the lowest mass for the 20 amino acids
+					dict[i][j] = 0;
+				} else {
+					double probability = 0;
+					for (int k = 0; k < BioinformaticsCommon.MASS_INT_LIST_WITH_DUPLICATES.length; k++) {
+						int prevMass = i - BioinformaticsCommon.MASS_INT_LIST_WITH_DUPLICATES[k];
+						if (prevMass >= 0) {
+							int prevScore = j - spectrum.get(i).mass;
+							if (prevScore >= 0 && prevScore < maxScore && dict[prevScore][prevMass] > 0) {
+								probability += (dict[prevScore][prevMass] / 20);
+							}
+						}
+						
+					}
+					dict[j][i] = probability;
+				}
+			}
+		}
+		
+		double probSum = 0;
+		for (int i = threshold; i < maxScore; i++) {
+			probSum += dict[i][width-1];
+		}
+		
+		return probSum;
 	}
 }
 
